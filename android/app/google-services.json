@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "6832643373",
+    "project_id": "decifra-rotulo",
+    "storage_bucket": "decifra-rotulo.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:6832643373:android:d7f6b5308517b9690a07a4",
+        "android_client_info": {
+          "package_name": "com.example.decifra_rotulo"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCkTh5A8eclEWsvylo5BV-at4VMG547T3o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
