@@ -3,25 +3,31 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
-class ScannerScreen extends StatelessWidget {
-  const ScannerScreen({super.key});
+// Este é o widget que contém a câmera e a mira
+class ScannerOverlay extends StatelessWidget {
+  const ScannerOverlay({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Escanear Produto')),
-      body: MobileScanner(
-        onDetect: (capture) {
-          final List<Barcode> barcodes = capture.barcodes;
-          if (barcodes.isNotEmpty) {
-            final String? barcodeValue = barcodes.first.rawValue;
-            if (barcodeValue != null) {
-              // Retorna o código de barras para a tela anterior
-              Navigator.pop(context, barcodeValue);
-            }
-          }
-        },
-      ),
+    return Stack(
+      children: [
+        const Positioned.fill(
+          child: MobileScanner(
+            // Não precisamos do onDetect aqui, será tratado por quem chama o dialog
+          ),
+        ),
+        // A "mira" (quadrado vazado)
+        Center(
+          child: Container(
+            width: 250, // Largura da mira
+            height: 250, // Altura da mira
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.white, width: 4),
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

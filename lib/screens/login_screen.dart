@@ -15,20 +15,74 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   final _authService = AuthService();
   bool _isLoading = false;
+  String? _errorMessage; // <-- NOVO: Variável para guardar a mensagem de erro
 
+  // Lógica de Login atualizada com tratamento de erro
   void _submit() async {
     if (_formKey.currentState?.validate() ?? false) {
-      setState(() => _isLoading = true);
-      await _authService.signInWithEmailAndPassword(
-        _emailController.text,
-        _passwordController.text,
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null; // Limpa erros anteriores
+      });
+
+      final user = await _authService.signInWithEmailAndPassword(
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
       );
-      // O AuthWrapper cuidará da navegação, não precisamos fazer nada aqui.
-      // Apenas paramos o loading se o widget ainda estiver na tela (caso de erro)
-      if (mounted) {
-        setState(() => _isLoading = false);
+
+      if (user == null) {
+        // Se o login falhar, define a mensagem de erro
+        setState(() {
+          _errorMessage = 'E-mail ou senha inválidos.';
+          _isLoading = false;
+        });
       }
+      // Se o login for bem-sucedido, o AuthWrapper nos levará para a home
     }
+  }
+
+  // NOVO: Lógica para "Esqueci Minha Senha"
+  void _showPasswordResetDialog() {
+    final resetEmailController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Recuperar Senha"),
+        content: TextField(
+          controller: resetEmailController,
+          decoration: const InputDecoration(hintText: "Digite seu e-mail"),
+          keyboardType: TextInputType.emailAddress,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text("Cancelar"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (resetEmailController.text.isNotEmpty) {
+                _authService
+                    .sendPasswordResetEmail(resetEmailController.text.trim());
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content:
+                          Text('Link de recuperação enviado para seu e-mail.')),
+                );
+              }
+            },
+            child: const Text("Enviar"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 
   @override
@@ -48,7 +102,28 @@ class _LoginScreenState extends State<LoginScreen> {
                 const Text('Bem-vindo ao Decifra Rótulo',
                     style:
                         TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 30),
+                const SizedBox(height: 20),
+
+                // NOVO: Caixa de erro que só aparece quando necessário
+                if (_errorMessage != null)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    margin: const EdgeInsets.only(bottom: 20),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade100,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.error_outline, color: Colors.red.shade800),
+                        const SizedBox(width: 10),
+                        Expanded(
+                            child: Text(_errorMessage!,
+                                style: TextStyle(color: Colors.red.shade800))),
+                      ],
+                    ),
+                  ),
+
                 TextFormField(
                   controller: _emailController,
                   decoration: const InputDecoration(
@@ -68,7 +143,17 @@ class _LoginScreenState extends State<LoginScreen> {
                       ? 'Por favor, insira uma senha'
                       : null,
                 ),
-                const SizedBox(height: 20),
+
+                // NOVO: Botão "Esqueci minha senha"
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: _showPasswordResetDialog,
+                    child: const Text('Esqueci minha senha'),
+                  ),
+                ),
+
+                const SizedBox(height: 10),
                 if (_isLoading)
                   const CircularProgressIndicator()
                 else
@@ -92,8 +177,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     foregroundColor: Colors.black87,
                     backgroundColor: Colors.white,
                     minimumSize: const Size(double.infinity, 50),
-                    shape: RoundedRectangleBorder(
-                        side: const BorderSide(color: Colors.grey)),
+                    shape: const RoundedRectangleBorder(
+                        side: BorderSide(color: Colors.grey)),
                   ),
                 ),
                 const SizedBox(height: 20),
