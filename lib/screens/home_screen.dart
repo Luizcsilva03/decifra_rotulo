@@ -1,5 +1,6 @@
 // lib/screens/home_screen.dart
 
+import 'package:decifra_rotulo/models/product_model.dart';
 import 'package:decifra_rotulo/screens/history_screen.dart';
 import 'package:decifra_rotulo/screens/product_detail_screen.dart';
 import 'package:decifra_rotulo/screens/profile_screen.dart';
@@ -7,12 +8,9 @@ import 'package:decifra_rotulo/screens/search_by_code_screen.dart';
 import 'package:decifra_rotulo/services/auth_service.dart';
 import 'package:decifra_rotulo/services/open_food_facts_service.dart';
 import 'package:flutter/material.dart';
-import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-
-import '../models/product_model.dart';
-
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -24,9 +22,8 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 1; // Começa na aba "Escanear" (índice 1)
 
-   // --- MUDANÇA 1: Atualiza a lista de telas ---
   static final List<Widget> _widgetOptions = <Widget>[
-    const SearchByCodeScreen(), // <-- AQUI ENTRA A NOVA TELA
+    const SearchByCodeScreen(),
     const HomeContent(),
     const HistoryScreen(),
   ];
@@ -61,16 +58,15 @@ class _HomeScreenState extends State<HomeScreen> {
         currentIndex: _selectedIndex,
         selectedItemColor: Colors.teal,
         onTap: _onItemTapped,
-        type: BottomNavigationBarType.fixed, // Garante que todos os itens apareçam
+        type: BottomNavigationBarType.fixed,
       ),
     );
   }
 }
 
-// -- Widget separado para o conteúdo principal --
+// -- Widget separado para o conteúdo principal da aba "Escanear" --
 class HomeContent extends StatefulWidget {
   const HomeContent({super.key});
-
   @override
   State<HomeContent> createState() => _HomeContentState();
 }
@@ -86,18 +82,22 @@ class _HomeContentState extends State<HomeContent> {
     final barcode = await showDialog<String>(
       context: context,
       builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: SizedBox(
           width: 300,
           height: 450,
-          child: MobileScanner(
-            controller: barcodeController,
-            onDetect: (capture) {
-              final String? code = capture.barcodes.first.rawValue;
-              if (code != null) {
-                barcodeController.stop(); // Para a câmera
-                Navigator.of(context).pop(code); // Fecha o dialog e retorna o código
-              }
-            },
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: MobileScanner(
+              controller: barcodeController,
+              onDetect: (capture) {
+                final String? code = capture.barcodes.first.rawValue;
+                if (code != null) {
+                  barcodeController.stop();
+                  Navigator.of(context).pop(code);
+                }
+              },
+            ),
           ),
         ),
       ),
@@ -108,9 +108,11 @@ class _HomeContentState extends State<HomeContent> {
     setState(() => _isLoading = true);
     try {
       final product = await _apiService.getProduct(barcode);
-      final historyBox = Hive.box<Product>('product_history');
-      await historyBox.put(product.barcode, product);
-
+      final user = _authService.currentUser;
+      if (user != null) {
+        final historyBox = await Hive.openBox<Product>('history_${user.uid}');
+        await historyBox.put(product.barcode, product);
+      }
       if (mounted) {
         Navigator.push(
           context,
@@ -152,68 +154,75 @@ class _HomeContentState extends State<HomeContent> {
         : (user?.email?.isNotEmpty == true ? user!.email![0].toUpperCase() : 'U');
 
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: Row(
+      body: SafeArea(
+        child: Stack(
           children: [
-            Image.asset('assets/logo.png', height: 30),
-            const SizedBox(width: 10),
-            const Text('Decifra Rótulo', style: TextStyle(color: Colors.black, fontSize: 20)),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: CircleAvatar(
-              radius: 16,
-              backgroundColor: Colors.grey.shade200,
-              child: Text(
-                initials,
-                style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.teal),
+            Center(
+              child: _isLoading
+                  ? LoadingAnimationWidget.staggeredDotsWave(color: Colors.teal, size: 100)
+                  : Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Image.asset('assets/logo.png', height: 80),
+                        const SizedBox(height: 10),
+                        const Text(
+                          'Decifra Rótulo',
+                          style: TextStyle(color: Colors.black, fontSize: 24, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 40),
+                        const Icon(Icons.qr_code_scanner_outlined, size: 150, color: Colors.teal),
+                        const SizedBox(height: 20),
+                        const Text('Pronto para decifrar?', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 10),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 40.0),
+                          child: Text(
+                            'Pressione o botão para abrir o scanner e aponte para um código de barras.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 16, color: Colors.grey),
+                          ),
+                        ),
+                        const SizedBox(height: 40),
+                        ElevatedButton.icon(
+                          onPressed: _showScannerDialog,
+                          icon: const Icon(Icons.camera_alt),
+                          label: const Text('Escanear Agora'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.teal,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                            textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                      ],
+                    ),
+            ),
+            // Ícone de Perfil posicionado no canto superior direito
+            Align(
+              alignment: Alignment.topRight,
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: IconButton(
+                  icon: CircleAvatar(
+                    radius: 18,
+                    backgroundColor: Colors.grey.shade200,
+                    child: Text(
+                      initials,
+                      style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.teal),
+                    ),
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const ProfileScreen()),
+                    );
+                  },
+                ),
               ),
             ),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const ProfileScreen()),
-              );
-            },
-          ),
-        ],
-      ),
-      body: Center(
-        child: _isLoading
-            ? LoadingAnimationWidget.staggeredDotsWave(color: Colors.teal, size: 100)
-            : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.qr_code_scanner_outlined, size: 150, color: Colors.teal),
-                  const SizedBox(height: 20),
-                  const Text('Pronto para decifrar?', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 10),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 40.0),
-                    child: Text(
-                      'Pressione o botão para abrir o scanner e aponte para um código de barras.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 16, color: Colors.grey),
-                    ),
-                  ),
-                  const SizedBox(height: 40),
-                  ElevatedButton.icon(
-                    onPressed: _showScannerDialog,
-                    icon: const Icon(Icons.camera_alt),
-                    label: const Text('Escanear Agora'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.teal,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                      textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
-                ],
-              ),
+          ],
+        ),
       ),
     );
   }

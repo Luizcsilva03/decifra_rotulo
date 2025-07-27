@@ -14,6 +14,9 @@ class Product extends HiveObject {
   final Nutriments nutriments;
   @HiveField(4)
   final String barcode;
+  // --- 1. ADICIONE ESTE NOVO CAMPO ---
+  @HiveField(5) // O índice precisa ser único
+  final String ingredientsText;
 
   Product({
     required this.productName,
@@ -21,7 +24,9 @@ class Product extends HiveObject {
     required this.imageUrl,
     required this.nutriments,
     required this.barcode,
+    required this.ingredientsText, // <-- Adicione aqui também
   });
+
 
   factory Product.fromJson(Map<String, dynamic> json) {
     if (json['status'] == 0 || json['product'] == null) {
@@ -34,6 +39,10 @@ class Product extends HiveObject {
       imageUrl: productData['image_url'] ?? '',
       nutriments: Nutriments.fromJson(productData['nutriments'] ?? {}),
       barcode: json['code'],
+      
+      // --- 2. ADICIONE ESTA LINHA PARA LER OS INGREDIENTES DA API ---
+      // A API pode retornar em várias línguas, 'ingredients_text_pt' é para português.
+      ingredientsText: productData['ingredients_text_pt'] ?? productData['ingredients_text'] ?? 'Ingredientes não informados.',
     );
   }
 }

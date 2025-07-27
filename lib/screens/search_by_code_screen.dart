@@ -32,8 +32,11 @@ class _SearchByCodeScreenState extends State<SearchByCodeScreen> {
 
     try {
       final product = await _apiService.getProduct(_barcodeController.text.trim());
-      final historyBox = Hive.box<Product>('product_history');
-      await historyBox.put(product.barcode, product);
+      final user = _authService.currentUser;
+      if (user != null) {
+        final historyBox = await Hive.openBox<Product>('history_${user.uid}');
+        await historyBox.put(product.barcode, product);
+      }
 
       if (mounted) {
         _barcodeController.clear();
@@ -83,89 +86,84 @@ class _SearchByCodeScreenState extends State<SearchByCodeScreen> {
         : (user?.email?.isNotEmpty == true ? user!.email![0].toUpperCase() : 'U');
 
     return Scaffold(
-      body: SafeArea( // Usa SafeArea para evitar que o conteúdo fique atrás da barra de status
-        child: Column(
+      body: SafeArea(
+        child: Stack(
           children: [
-            // --- CABEÇALHO CUSTOMIZADO ADICIONADO ---
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Image.asset('assets/logo.png', height: 30),
-                      const SizedBox(width: 10),
-                      const Text('Decifra Rótulo', style: TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                  IconButton(
-                    icon: CircleAvatar(
-                      radius: 16,
-                      backgroundColor: Colors.grey.shade200,
-                      child: Text(
-                        initials,
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.teal),
-                      ),
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Image.asset('assets/logo.png', height: 80),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Decifra Rótulo',
+                      style: TextStyle(color: Colors.black, fontSize: 24, fontWeight: FontWeight.bold),
                     ),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const ProfileScreen()),
-                      );
-                    },
-                  ),
-                ],
+                    const SizedBox(height: 30),
+                    const Text(
+                      'Digite o número do código de barras do produto que você deseja consultar.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 16, color: Colors.grey),
+                    ),
+                    const SizedBox(height: 20),
+                    TextFormField(
+                      controller: _barcodeController,
+                      decoration: const InputDecoration(
+                        labelText: 'Código de Barras',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.barcode_reader),
+                      ),
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Por favor, insira o código.';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                    if (_isLoading)
+                      LoadingAnimationWidget.staggeredDotsWave(color: Colors.teal, size: 50)
+                    else
+                      ElevatedButton.icon(
+                        onPressed: _searchProduct,
+                        icon: const Icon(Icons.search),
+                        label: const Text('Pesquisar'),
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size(double.infinity, 50),
+                          backgroundColor: Colors.teal,
+                          foregroundColor: Colors.white,
+                          textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
-            // --- CONTEÚDO PRINCIPAL DA TELA ---
-            Expanded(
+            // Ícone de Perfil posicionado no canto superior direito para consistência
+            Align(
+              alignment: Alignment.topRight,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text(
-                        'Digite o número do código de barras do produto que você deseja consultar.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 16, color: Colors.grey),
-                      ),
-                      const SizedBox(height: 20),
-                      TextFormField(
-                        controller: _barcodeController,
-                        decoration: const InputDecoration(
-                          labelText: 'Código de Barras',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.barcode_reader),
-                        ),
-                        keyboardType: TextInputType.number,
-                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Por favor, insira o código.';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 24),
-                      if (_isLoading)
-                        LoadingAnimationWidget.staggeredDotsWave(color: Colors.teal, size: 50)
-                      else
-                        ElevatedButton.icon(
-                          onPressed: _searchProduct,
-                          icon: const Icon(Icons.search),
-                          label: const Text('Pesquisar'),
-                          style: ElevatedButton.styleFrom(
-                            minimumSize: const Size(double.infinity, 50),
-                            backgroundColor: Colors.teal,
-                            foregroundColor: Colors.white,
-                            textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                    ],
+                padding: const EdgeInsets.all(8.0),
+                child: IconButton(
+                  icon: CircleAvatar(
+                    radius: 18,
+                    backgroundColor: Colors.grey.shade200,
+                    child: Text(
+                      initials,
+                      style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.teal),
+                    ),
                   ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const ProfileScreen()),
+                    );
+                  },
                 ),
               ),
             ),

@@ -21,7 +21,7 @@ Future<void> main() async {
   await Hive.initFlutter();
   Hive.registerAdapter(ProductAdapter());
   Hive.registerAdapter(NutrimentsAdapter());
-  await Hive.openBox<Product>('product_history');
+  //await Hive.openBox<Product>('product_history');
 
   runApp(const MyApp());
 }

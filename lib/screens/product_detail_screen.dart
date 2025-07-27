@@ -78,6 +78,21 @@ class ProductDetailScreen extends StatelessWidget {
             _buildNutrimentRow('Açúcares', product.nutriments.sugars, 'g'),
             _buildNutrimentRow('Proteínas', product.nutriments.proteins, 'g'),
             _buildNutrimentRow('Sal', product.nutriments.salt, 'g'),
+          // --- INÍCIO DA MUDANÇA: SEÇÃO DE INGREDIENTES ---
+            const SizedBox(height: 24),
+            const Divider(),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8.0),
+              child: Text(
+                'Ingredientes',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.teal),
+              ),
+            ),
+            Text(
+              product.ingredientsText,
+              style: const TextStyle(fontSize: 16, height: 1.5), // height melhora a legibilidade
+            ),
+            // --- FIM DA MUDANÇA ---
           ],
         ),
       ),

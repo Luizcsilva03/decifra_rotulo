@@ -47,5 +47,12 @@
 		<true/>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<key>NSPhotoLibraryUsageDescription</key>
+		
+		<string>Este aplicativo precisa de acesso à sua galeria para que você possa escolher uma foto de perfil.</string>
+		<key>NSCameraUsageDescription</key>
+		<string>Este aplicativo precisa de acesso à sua câmera para que você possa tirar uma foto de perfil.</string>
+		<key>NSMicrophoneUsageDescription</key>
+		<string>Este aplicativo precisa de acesso ao seu microfone para gravar vídeos.</string>
 	</dict>
 </plist>

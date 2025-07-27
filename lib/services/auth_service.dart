@@ -1,22 +1,23 @@
 // lib/services/auth_service.dart
 
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:decifra_rotulo/models/product_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:hive/hive.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseStorage _storage = FirebaseStorage.instance;
 
   Stream<User?> get user => _auth.authStateChanges();
   User? get currentUser => _auth.currentUser;
 
-  // MÉTODO DE CADASTRO CORRIGIDO
   Future<User?> signUpWithEmailAndPassword(String name, String email, String password) async {
-    // O bloco try-catch foi removido daqui.
-    // Agora, se o Firebase der um erro, a exceção será enviada
-    // diretamente para quem chamou a função (a RegisterScreen).
     final UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
       email: email,
       password: password,
@@ -28,16 +29,14 @@ class AuthService {
         'name': name,
         'email': email,
         'createdAt': Timestamp.now(),
+        'photoURL': null, // Inicia com a foto nula
       });
       await user.updateDisplayName(name);
     }
     return user;
   }
 
-  // MÉTODO DE LOGIN CORRIGIDO
   Future<User?> signInWithEmailAndPassword(String email, String password) async {
-    // O bloco try-catch também foi removido daqui para permitir
-    // que a tela de login trate os erros.
     final UserCredential userCredential = await _auth.signInWithEmailAndPassword(
       email: email,
       password: password,
@@ -45,10 +44,7 @@ class AuthService {
     return userCredential.user;
   }
 
-  // MÉTODO DO GOOGLE CORRIGIDO
   Future<User?> signInWithGoogle() async {
-    // Mantemos o try-catch aqui porque o fluxo de login social
-    // pode ser cancelado pelo usuário, o que não é um "erro" real.
     try {
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) {
@@ -60,19 +56,55 @@ class AuthService {
         idToken: googleAuth.idToken,
       );
       final UserCredential userCredential = await _auth.signInWithCredential(credential);
-      return userCredential.user;
+      final user = userCredential.user;
+
+      // Garante que o usuário do Google também tenha um registro no Firestore
+      if (user != null && userCredential.additionalUserInfo!.isNewUser) {
+        await _firestore.collection('users').doc(user.uid).set({
+          'name': user.displayName,
+          'email': user.email,
+          'createdAt': Timestamp.now(),
+          'photoURL': user.photoURL,
+        });
+      }
+
+      return user;
     } catch (e) {
       return null;
     }
   }
   
-  // MÉTODO DE RECUPERAÇÃO DE SENHA CORRIGIDO
   Future<void> sendPasswordResetEmail(String email) async {
-    // O try-catch foi removido para que a tela possa dar feedback se o e-mail não existir.
     await _auth.sendPasswordResetEmail(email: email);
   }
 
+  Future<String?> uploadProfilePicture(File imageFile) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return null;
+  
+      final ref = _storage.ref().child('profile_pictures').child('${user.uid}.jpg');
+      await ref.putFile(imageFile);
+      final downloadUrl = await ref.getDownloadURL();
+      await user.updatePhotoURL(downloadUrl);
+  
+      await _firestore.collection('users').doc(user.uid).update({
+        'photoURL': downloadUrl,
+      });
+  
+      return downloadUrl;
+    } catch (e) {
+      return null;
+    }
+  }
+
   Future<void> signOut() async {
+    final user = _auth.currentUser;
+    if (user != null) {
+      final userHistoryBox = await Hive.openBox<Product>('history_${user.uid}');
+      await userHistoryBox.close();
+    }
+
     await _googleSignIn.signOut();
     await _auth.signOut();
   }
