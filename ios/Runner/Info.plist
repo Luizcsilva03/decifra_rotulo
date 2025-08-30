@@ -48,7 +48,10 @@
 		<key>UIStatusBarHidden</key>
 		<false/>
 		<key>NSPhotoLibraryUsageDescription</key>
-		
+		<key>NSCameraUsageDescription</key>
+		<string>Este aplicativo precisa de acesso à câmera para escanear códigos de barras de produtos.</string>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>Este aplicativo precisa de acesso à sua galeria para que você possa escolher uma foto de perfil.</string>
 		<string>Este aplicativo precisa de acesso à sua galeria para que você possa escolher uma foto de perfil.</string>
 		<key>NSCameraUsageDescription</key>
 		<string>Este aplicativo precisa de acesso à sua câmera para que você possa tirar uma foto de perfil.</string>

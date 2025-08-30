@@ -5,6 +5,7 @@ import 'package:decifra_rotulo/services/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -16,10 +17,27 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final AuthService _authService = AuthService();
   bool _isUploading = false;
+  String _appVersion = '...';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAppVersion();
+  }
+
+  Future<void> _loadAppVersion() async {
+    final packageInfo = await PackageInfo.fromPlatform();
+    if (mounted) {
+      setState(() {
+        // Combina a versão com o número do build
+        _appVersion = '${packageInfo.version} (${packageInfo.buildNumber})';
+      });
+    }
+  }
 
   Future<void> _pickAndUploadImage() async {
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 50);
 
     if (pickedFile != null) {
       setState(() => _isUploading = true);
@@ -30,6 +48,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
         setState(() => _isUploading = false);
       }
     }
+  }
+
+  void _showAboutDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        title: Center(child: Image.asset('assets/logo.png', height: 60)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              "Decifra Rótulo",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text("Versão $_appVersion"),
+            const SizedBox(height: 24),
+            const Text(
+              "Este aplicativo utiliza a base de dados mundial e colaborativa do Open Food Facts. Nosso muito obrigado a toda a comunidade!",
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, color: Colors.black54),
+            ),
+          ],
+        ),
+        actions: [
+          Center(
+            child: TextButton(
+              child: const Text("FECHAR"),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -56,11 +109,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 24.0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.stretch, // Centraliza horizontalmente
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Adiciona espaço flexível no topo para empurrar o conteúdo para o centro
                 const Spacer(flex: 2),
 
+                // -- SEÇÃO DO AVATAR, NOME E E-MAIL --
                 Stack(
                   alignment: Alignment.center,
                   children: [
@@ -76,7 +129,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     Positioned(
                       bottom: 0,
-                      right: MediaQuery.of(context).size.width / 2 - 80, // Centraliza o ícone de edição
+                      right: MediaQuery.of(context).size.width / 2 - 80,
                       child: CircleAvatar(
                         radius: 20,
                         backgroundColor: Colors.white,
@@ -100,10 +153,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   textAlign: TextAlign.center,
                   style: const TextStyle(fontSize: 16, color: Colors.grey),
                 ),
+                // -- FIM DA SEÇÃO DO AVATAR --
                 
-                // Adiciona espaço flexível abaixo para empurrar o botão para o final
-                const Spacer(flex: 3), 
+                const Spacer(flex: 3),
 
+                // -- BOTÃO "SOBRE" --
+                TextButton.icon(
+                  icon: const Icon(Icons.info_outline, color: Colors.grey),
+                  label: const Text('Sobre o app', style: TextStyle(color: Colors.grey)),
+                  onPressed: _showAboutDialog,
+                ),
+                const SizedBox(height: 10),
+
+                // -- BOTÃO DE LOGOUT --
                 IconButton(
                   icon: const Icon(Icons.logout, color: Colors.redAccent, size: 30),
                   onPressed: () {

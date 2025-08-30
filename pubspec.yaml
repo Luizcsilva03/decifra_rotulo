@@ -34,6 +34,11 @@ dependencies:
   # Para salvar as imagens no Firebase
   firebase_storage: ^12.1.0
 
+  # Para salvar pequenas informações no dispositivo
+  shared_preferences: ^2.2.3
+
+  # Para ler informações do app, como a versão
+  package_info_plus: ^8.0.0 
 
 dev_dependencies:
   flutter_test:
@@ -44,6 +49,8 @@ dev_dependencies:
   build_runner: ^2.4.9
   flutter_lints: ^3.0.0
   flutter_native_splash: ^2.4.0
+  #Gerador de icones
+  flutter_launcher_icons: ^0.13.1
 
 # Configuração do Flutter
 flutter:
@@ -58,3 +65,9 @@ flutter_native_splash:
   image: assets/logo.png
   android: true
   ios: true
+
+# ADICIONE ESTE BLOCO INTEIRO
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/logo.png"
