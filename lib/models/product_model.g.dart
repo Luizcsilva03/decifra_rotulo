@@ -71,7 +71,7 @@ class NutrimentsAdapter extends TypeAdapter<Nutriments> {
       carbohydrates: fields[2] as double?,
       sugars: fields[3] as double?,
       proteins: fields[4] as double?,
-      salt: fields[5] as double?,
+      salt: fields[5] as String?,
     );
   }
 

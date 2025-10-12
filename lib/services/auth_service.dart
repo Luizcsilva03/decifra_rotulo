@@ -17,8 +17,10 @@ class AuthService {
   Stream<User?> get user => _auth.authStateChanges();
   User? get currentUser => _auth.currentUser;
 
-  Future<User?> signUpWithEmailAndPassword(String name, String email, String password) async {
-    final UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+  Future<User?> signUpWithEmailAndPassword(
+      String name, String email, String password) async {
+    final UserCredential userCredential =
+        await _auth.createUserWithEmailAndPassword(
       email: email,
       password: password,
     );
@@ -36,8 +38,10 @@ class AuthService {
     return user;
   }
 
-  Future<User?> signInWithEmailAndPassword(String email, String password) async {
-    final UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+  Future<User?> signInWithEmailAndPassword(
+      String email, String password) async {
+    final UserCredential userCredential =
+        await _auth.signInWithEmailAndPassword(
       email: email,
       password: password,
     );
@@ -50,12 +54,14 @@ class AuthService {
       if (googleUser == null) {
         return null;
       }
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
       final AuthCredential credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
-      final UserCredential userCredential = await _auth.signInWithCredential(credential);
+      final UserCredential userCredential =
+          await _auth.signInWithCredential(credential);
       final user = userCredential.user;
 
       // Garante que o usuário do Google também tenha um registro no Firestore
@@ -73,7 +79,7 @@ class AuthService {
       return null;
     }
   }
-  
+
   Future<void> sendPasswordResetEmail(String email) async {
     await _auth.sendPasswordResetEmail(email: email);
   }
@@ -82,16 +88,17 @@ class AuthService {
     try {
       final user = _auth.currentUser;
       if (user == null) return null;
-  
-      final ref = _storage.ref().child('profile_pictures').child('${user.uid}.jpg');
+
+      final ref =
+          _storage.ref().child('profile_pictures').child('${user.uid}.jpg');
       await ref.putFile(imageFile);
       final downloadUrl = await ref.getDownloadURL();
       await user.updatePhotoURL(downloadUrl);
-  
+
       await _firestore.collection('users').doc(user.uid).update({
         'photoURL': downloadUrl,
       });
-  
+
       return downloadUrl;
     } catch (e) {
       return null;

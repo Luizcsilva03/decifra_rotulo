@@ -3,12 +3,13 @@
 import 'package:decifra_rotulo/models/product_model.dart';
 import 'package:decifra_rotulo/screens/product_detail_screen.dart';
 import 'package:decifra_rotulo/screens/profile_screen.dart';
+import 'package:decifra_rotulo/services/api_exceptions.dart';
 import 'package:decifra_rotulo/services/auth_service.dart';
 import 'package:decifra_rotulo/services/open_food_facts_service.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:hive/hive.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
+import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 
 class SearchByCodeScreen extends StatefulWidget {
   const SearchByCodeScreen({super.key});
@@ -24,6 +25,12 @@ class _SearchByCodeScreenState extends State<SearchByCodeScreen> {
   final _authService = AuthService();
   bool _isLoading = false;
 
+  final maskFormatter = MaskTextInputFormatter(
+    mask: '#############',
+    filter: {"#": RegExp(r'[0-9]')},
+    type: MaskAutoCompletionType.lazy,
+  );
+
   Future<void> _searchProduct() async {
     FocusScope.of(context).unfocus();
     if (!(_formKey.currentState?.validate() ?? false)) return;
@@ -31,7 +38,8 @@ class _SearchByCodeScreenState extends State<SearchByCodeScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final product = await _apiService.getProduct(_barcodeController.text.trim());
+      final product =
+          await _apiService.getProduct(maskFormatter.getUnmaskedText());
       final user = _authService.currentUser;
       if (user != null) {
         final historyBox = await Hive.openBox<Product>('history_${user.uid}');
@@ -47,8 +55,13 @@ class _SearchByCodeScreenState extends State<SearchByCodeScreen> {
           ),
         );
       }
+    } on ProductNotFoundException catch (e) {
+      _showErrorDialog(e.message);
+    } on NetworkException catch (e) {
+      _showErrorDialog(e.message);
     } catch (e) {
-      _showErrorDialog('Produto não encontrado ou código inválido.');
+      _showErrorDialog(
+          'Ocorreu um erro inesperado. Tente novamente mais tarde.');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -83,7 +96,9 @@ class _SearchByCodeScreenState extends State<SearchByCodeScreen> {
     final user = _authService.currentUser;
     final String initials = user?.displayName?.isNotEmpty == true
         ? user!.displayName![0].toUpperCase()
-        : (user?.email?.isNotEmpty == true ? user!.email![0].toUpperCase() : 'U');
+        : (user?.email?.isNotEmpty == true
+            ? user!.email![0].toUpperCase()
+            : 'U');
 
     return Scaffold(
       body: SafeArea(
@@ -100,7 +115,10 @@ class _SearchByCodeScreenState extends State<SearchByCodeScreen> {
                     const SizedBox(height: 10),
                     const Text(
                       'Decifra Rótulo',
-                      style: TextStyle(color: Colors.black, fontSize: 24, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                          color: Colors.black,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 30),
                     const Text(
@@ -115,19 +133,29 @@ class _SearchByCodeScreenState extends State<SearchByCodeScreen> {
                         labelText: 'Código de Barras',
                         border: OutlineInputBorder(),
                         prefixIcon: Icon(Icons.barcode_reader),
+                        counterText:
+                            "", // Esconde o contador de caracteres padrão
                       ),
                       keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      // Aplica a máscara e o limite de caracteres
+                      inputFormatters: [maskFormatter],
+                      maxLength: 13, // Limita a 13 dígitos (padrão EAN-13)
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Por favor, insira o código.';
+                        }
+                        // O maskFormatter garante que só tenha números,
+                        // então só precisamos verificar o comprimento.
+                        if (maskFormatter.getUnmaskedText().length < 13) {
+                          return 'O código de barras deve ter 13 dígitos.';
                         }
                         return null;
                       },
                     ),
                     const SizedBox(height: 24),
                     if (_isLoading)
-                      LoadingAnimationWidget.staggeredDotsWave(color: Colors.teal, size: 50)
+                      LoadingAnimationWidget.staggeredDotsWave(
+                          color: Colors.teal, size: 50)
                     else
                       ElevatedButton.icon(
                         onPressed: _searchProduct,
@@ -137,7 +165,8 @@ class _SearchByCodeScreenState extends State<SearchByCodeScreen> {
                           minimumSize: const Size(double.infinity, 50),
                           backgroundColor: Colors.teal,
                           foregroundColor: Colors.white,
-                          textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          textStyle: const TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                       ),
                   ],
@@ -155,13 +184,15 @@ class _SearchByCodeScreenState extends State<SearchByCodeScreen> {
                     backgroundColor: Colors.grey.shade200,
                     child: Text(
                       initials,
-                      style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.teal),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, color: Colors.teal),
                     ),
                   ),
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const ProfileScreen()),
+                      MaterialPageRoute(
+                          builder: (context) => const ProfileScreen()),
                     );
                   },
                 ),

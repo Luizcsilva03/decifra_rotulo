@@ -8,10 +8,10 @@ import 'package:decifra_rotulo/screens/search_by_code_screen.dart';
 import 'package:decifra_rotulo/services/auth_service.dart';
 import 'package:decifra_rotulo/services/open_food_facts_service.dart';
 import 'package:flutter/material.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart'; // Import do AdMob
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -76,98 +76,107 @@ class _HomeContentState extends State<HomeContent> {
   final AuthService _authService = AuthService();
   bool _isLoading = false;
 
-// --- INÍCIO DAS NOVAS MUDANÇAS ---
+  // --- LÓGICA DO ANÚNCIO INTERSTICIAL ---
+  InterstitialAd? _interstitialAd;
+  int _scanCounter = 0;
+
+  // ⚠️ IMPORTANTE: Este é o ID de TESTE. NUNCA use seu ID real no desenvolvimento.
+  final String _adUnitId = 'ca-app-pub-3940256099942544/1033173712';
+
   @override
   void initState() {
     super.initState();
-    // Atrasamos um pouco a verificação para dar tempo da tela construir
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkAndShowWelcomeDialog();
-    });
+    _loadInterstitialAd();
   }
 
-  Future<void> _checkAndShowWelcomeDialog() async {
-    // 1. Acessa o "bloco de notas" do dispositivo
-    final prefs = await SharedPreferences.getInstance();
-    // 2. Procura pela anotação 'welcomeDialogShown'. Se não encontrar, assume 'false'.
-    //final bool welcomeDialogShown = prefs.getBool('welcomeDialogShown') ?? false;
-    
-    // Linha MOCADA para sempre mostrar o dialog durante os testes
-    const bool welcomeDialogShown = false; 
-    
-    // Pega o nome do usuário aqui
-  final user = _authService.currentUser;
-  // Se não tiver nome de exibição, usa um genérico amigável
-  final userName = user?.displayName?.split(' ').first ?? 'Decifrador(a)';
-
-  if (!welcomeDialogShown && mounted) {
-    // Passa o nome do usuário para a função do dialog
-    _showWelcomeDialog(prefs, userName);
-  }
-}
-
-// Função que mostra o dialog, agora com o nome do usuário e a correção de layout
-void _showWelcomeDialog(SharedPreferences prefs, String userName) {
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-
-    builder: (context) => AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      title: Center(child: Image.asset('assets/logo.png', height: 60)),
-      content: SingleChildScrollView( // <-- CORREÇÃO DO OVERFLOW
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              "Bem-vindo(a), $userName!", // <-- NOME DO USUÁRIO AQUI
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              "ao Decifra Rótulo",
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              // Usando o texto que você gostou (Opção B)
-              "Rótulos complicados? Nunca mais! Descubra informações nutricionais, ingredientes e muito mais com apenas um scan. Simples, rápido e feito para você.",
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16, color: Colors.black54),
-            ),
-          ],
-        ),
+  void _loadInterstitialAd() {
+    InterstitialAd.load(
+      adUnitId: _adUnitId,
+      request: const AdRequest(),
+      adLoadCallback: InterstitialAdLoadCallback(
+        onAdLoaded: (ad) {
+          _interstitialAd = ad;
+        },
+        onAdFailedToLoad: (error) {
+          _interstitialAd = null;
+        },
       ),
-      actions: [
-        Center(
-          child: TextButton(
-            child: const Text("VAMOS LÁ!", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-          ),
-        ),
-      ],
-    ),
-  );
-  
-  // Marca que o dialog foi visto para não mostrar novamente (quando não estiver mocado)
-  prefs.setBool('welcomeDialogShown', true);
-}
+    );
+  }
 
+  void _showInterstitialAd() {
+    if (_interstitialAd != null) {
+      _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
+        onAdDismissedFullScreenContent: (ad) {
+          ad.dispose();
+          _loadInterstitialAd();
+        },
+        onAdFailedToShowFullScreenContent: (ad, error) {
+          ad.dispose();
+          _loadInterstitialAd();
+        },
+      );
+      _interstitialAd!.show();
+      _interstitialAd = null;
+    }
+  }
+  // --- FIM DA LÓGICA DO ANÚNCIO ---
+
+  @override
+  void dispose() {
+    _interstitialAd?.dispose();
+    super.dispose();
+  }
 
   Future<void> _showScannerDialog() async {
     final barcodeController = MobileScannerController(
-      facing: CameraFacing.back, // Pede explicitamente a câmera traseira
-      torchEnabled: false, // Garante que a lanterna comece desligada
+      facing: CameraFacing.back,
+      torchEnabled: false,
+      detectionSpeed: DetectionSpeed.normal,
     );
 
-    // -- AGORA CHAMAMOS O NOVO WIDGET STATEFUL DO SCANNER --
     final barcode = await showDialog<String>(
       context: context,
-      builder: (context) => BarcodeScannerDialog(controller: barcodeController),
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: SizedBox(
+          width: 300,
+          height: 450,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                MobileScanner(
+                  controller: barcodeController,
+                  onDetect: (capture) {
+                    final String? code = capture.barcodes.first.rawValue;
+                    if (code != null) {
+                      barcodeController.stop();
+                      Navigator.of(context).pop(code);
+                    }
+                  },
+                ),
+                Container(
+                  width: 250,
+                  height: 150,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.amber.withAlpha(200), width: 3),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                Center(
+                  child: Container(
+                    width: 250,
+                    height: 1,
+                    color: Colors.red,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
 
     if (barcode == null || barcode.isEmpty) return;
@@ -180,6 +189,13 @@ void _showWelcomeDialog(SharedPreferences prefs, String userName) {
         final historyBox = await Hive.openBox<Product>('history_${user.uid}');
         await historyBox.put(product.barcode, product);
       }
+
+      _scanCounter++;
+      if (_scanCounter >= 3) {
+        _showInterstitialAd();
+        _scanCounter = 0;
+      }
+
       if (mounted) {
         Navigator.push(
           context,
@@ -227,10 +243,8 @@ void _showWelcomeDialog(SharedPreferences prefs, String userName) {
             Center(
               child: _isLoading
                   ? LoadingAnimationWidget.staggeredDotsWave(color: Colors.teal, size: 100)
-                  // --- INÍCIO DA CORREÇÃO ---
                   : SingleChildScrollView(
                       child: Padding(
-                        // Adicionamos um padding vertical para dar um respiro em telas pequenas
                         padding: const EdgeInsets.symmetric(vertical: 24.0),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -271,9 +285,7 @@ void _showWelcomeDialog(SharedPreferences prefs, String userName) {
                         ),
                       ),
                     ),
-              // --- FIM DA CORREÇÃO ---
             ),
-            // Ícone de Perfil posicionado no canto superior direito
             Align(
               alignment: Alignment.topRight,
               child: Padding(
@@ -297,99 +309,6 @@ void _showWelcomeDialog(SharedPreferences prefs, String userName) {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-
-// --- NOVO WIDGET: BarcodeScannerDialog ---
-class BarcodeScannerDialog extends StatefulWidget {
-  final MobileScannerController controller;
-
-  const BarcodeScannerDialog({super.key, required this.controller});
-
-  @override
-  State<BarcodeScannerDialog> createState() => _BarcodeScannerDialogState();
-}
-
-class _BarcodeScannerDialogState extends State<BarcodeScannerDialog> with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _animation;
-
-  // Dimensões da mira (iguais às do Container da mira)
-  final double scannerWidth = 250;
-  final double scannerHeight = 150;
-
-  @override
-  void initState() {
-    super.initState();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2), // Duração da animação da linha
-    )..repeat(reverse: true); // Repete a animação de cima para baixo e de baixo para cima
-
-    // Animação para mover de 0.0 (topo da mira) a 1.0 (base da mira)
-    _animation = Tween<double>(begin: 0.0, end: 1.0).animate(_animationController);
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    widget.controller.dispose(); // Não esquecer de liberar o controller da câmera
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: SizedBox(
-        width: 300, // Tamanho do dialog
-        height: 450, // Tamanho do dialog
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // Camada 1: A Câmera
-              MobileScanner(
-                controller: widget.controller,
-                onDetect: (capture) {
-                  final String? code = capture.barcodes.first.rawValue;
-                  if (code != null) {
-                    widget.controller.stop();
-                    Navigator.of(context).pop(code);
-                  }
-                },
-              ),
-              // Camada 2: A Mira (Quadrado Vazado)
-              Container(
-                width: scannerWidth,
-                height: scannerHeight,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.amber.withAlpha(200), width: 3),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              // Camada 3: A Linha Vermelha Animada
-              AnimatedBuilder(
-                animation: _animation,
-                builder: (context, child) {
-                  return Positioned(
-                    // Calcula a posição Y da linha dentro da mira
-                    top: (450 - scannerHeight) / 2 + (scannerHeight * _animation.value) -1,
-                    child: Container(
-                      width: scannerWidth,
-                      height: 2, // Altura da linha
-                      color: Colors.redAccent,
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
         ),
       ),
     );

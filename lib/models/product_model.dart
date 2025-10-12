@@ -1,5 +1,6 @@
-import 'package:hive/hive.dart';
+// lib/models/product_model.dart
 
+import 'package:hive/hive.dart';
 part 'product_model.g.dart';
 
 @HiveType(typeId: 0)
@@ -14,8 +15,7 @@ class Product extends HiveObject {
   final Nutriments nutriments;
   @HiveField(4)
   final String barcode;
-  // --- 1. ADICIONE ESTE NOVO CAMPO ---
-  @HiveField(5) // O índice precisa ser único
+  @HiveField(5)
   final String ingredientsText;
 
   Product({
@@ -24,14 +24,10 @@ class Product extends HiveObject {
     required this.imageUrl,
     required this.nutriments,
     required this.barcode,
-    required this.ingredientsText, // <-- Adicione aqui também
+    required this.ingredientsText,
   });
 
-
   factory Product.fromJson(Map<String, dynamic> json) {
-    if (json['status'] == 0 || json['product'] == null) {
-      throw Exception('Produto não encontrado');
-    }
     final productData = json['product'];
     return Product(
       productName: productData['product_name'] ?? 'Nome não disponível',
@@ -39,10 +35,9 @@ class Product extends HiveObject {
       imageUrl: productData['image_url'] ?? '',
       nutriments: Nutriments.fromJson(productData['nutriments'] ?? {}),
       barcode: json['code'],
-      
-      // --- 2. ADICIONE ESTA LINHA PARA LER OS INGREDIENTES DA API ---
-      // A API pode retornar em várias línguas, 'ingredients_text_pt' é para português.
-      ingredientsText: productData['ingredients_text_pt'] ?? productData['ingredients_text'] ?? 'Ingredientes não informados.',
+      ingredientsText: productData['ingredients_text_pt'] ??
+          productData['ingredients_text'] ??
+          'Ingredientes não informados.',
     );
   }
 }
@@ -60,7 +55,7 @@ class Nutriments {
   @HiveField(4)
   final double? proteins;
   @HiveField(5)
-  final double? salt;
+  final String? salt;
 
   Nutriments({
     this.energyKcal,
@@ -72,9 +67,15 @@ class Nutriments {
   });
 
   factory Nutriments.fromJson(Map<String, dynamic> json) {
+    // --- FUNÇÃO toDouble ATUALIZADA E MAIS ROBUSTA ---
     double? toDouble(dynamic value) {
-      if (value is num) return value.toDouble();
-      return null;
+      if (value is num) {
+        return value.toDouble(); // Se já for um número, converte
+      }
+      if (value is String) {
+        return double.tryParse(value); // Se for texto, tenta converter
+      }
+      return null; // Se for qualquer outra coisa, retorna nulo
     }
 
     return Nutriments(
@@ -83,7 +84,7 @@ class Nutriments {
       carbohydrates: toDouble(json['carbohydrates_100g']),
       sugars: toDouble(json['sugars_100g']),
       proteins: toDouble(json['proteins_100g']),
-      salt: toDouble(json['salt_100g']),
+      salt: json['salt_100g']?.toString(),
     );
   }
 }

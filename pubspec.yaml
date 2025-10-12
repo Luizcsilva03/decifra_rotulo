@@ -40,6 +40,10 @@ dependencies:
   # Para ler informações do app, como a versão
   package_info_plus: ^8.0.0 
 
+  # Para criar máscaras em campos de texto
+  mask_text_input_formatter: ^2.9.0
+  google_mobile_ads: ^6.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
