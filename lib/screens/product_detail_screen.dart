@@ -1,6 +1,7 @@
 // lib/screens/product_detail_screen.dart
 
 import 'package:decifra_rotulo/models/product_model.dart';
+import 'package:decifra_rotulo/widgets/reusable_banner_ad.dart';
 import 'package:flutter/material.dart';
 
 class ProductDetailScreen extends StatelessWidget {
@@ -11,13 +12,18 @@ class ProductDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black54),
       ),
-      extendBodyBehindAppBar: true,
+      // --- MUDANÇA 1: Usamos a propriedade correta para o banner ---
+      bottomNavigationBar: const ReusableBannerAd(),
+      
+      // O Column foi removido daqui
       body: SingleChildScrollView(
+        // O padding do SingleChildScrollView agora cuida do espaço
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -39,26 +45,19 @@ class ProductDetailScreen extends StatelessWidget {
                         );
                       },
                       errorBuilder: (context, error, stackTrace) {
-                        return const Icon(Icons.fastfood,
-                            size: 150, color: Colors.grey);
+                        return const Icon(Icons.fastfood, size: 150, color: Colors.grey);
                       },
                     ),
                   const SizedBox(height: 16),
                   Text(
                     product.productName,
-                    style: Theme.of(context)
-                        .textTheme
-                        .headlineSmall
-                        ?.copyWith(fontWeight: FontWeight.bold),
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
                   Text(
                     product.brands,
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(color: Colors.grey[600]),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.grey[600]),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -70,33 +69,22 @@ class ProductDetailScreen extends StatelessWidget {
               padding: EdgeInsets.symmetric(vertical: 8.0),
               child: Text(
                 'Informação Nutricional (por 100g)',
-                style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.teal),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.teal),
               ),
             ),
-            // As chamadas aqui não mudam
-            _buildNutrimentRow(
-                'Calorias', product.nutriments.energyKcal, 'kcal'),
+            _buildNutrimentRow('Calorias', product.nutriments.energyKcal, 'kcal'),
             _buildNutrimentRow('Gorduras', product.nutriments.fat, 'g'),
-            _buildNutrimentRow(
-                'Carboidratos', product.nutriments.carbohydrates, 'g'),
+            _buildNutrimentRow('Carboidratos', product.nutriments.carbohydrates, 'g'),
             _buildNutrimentRow('Açúcares', product.nutriments.sugars, 'g'),
             _buildNutrimentRow('Proteínas', product.nutriments.proteins, 'g'),
-            _buildNutrimentRow('Sal', product.nutriments.salt,
-                'g'), // Esta é a chamada que estava causando o erro
-
+            _buildNutrimentRow('Sal', product.nutriments.salt, 'g'),
             const SizedBox(height: 24),
             const Divider(),
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 8.0),
               child: Text(
                 'Ingredientes',
-                style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.teal),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.teal),
               ),
             ),
             Text(
@@ -109,20 +97,15 @@ class ProductDetailScreen extends StatelessWidget {
     );
   }
 
-  // --- FUNÇÃO CORRIGIDA PARA ACEITAR TANTO double QUANTO String ---
   Widget _buildNutrimentRow(String label, dynamic value, String unit) {
-    String displayValue = 'N/A'; // Valor padrão
-
+    String displayValue = 'N/A';
     if (value != null) {
       if (value is double) {
-        // Se for um número, formata com 2 casas decimais
         displayValue = '${value.toStringAsFixed(2)} $unit';
       } else if (value is String && value.isNotEmpty) {
-        // Se for um texto, apenas o exibe
         displayValue = '$value $unit';
       }
     }
-
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(

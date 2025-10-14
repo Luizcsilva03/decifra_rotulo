@@ -5,10 +5,10 @@ import 'package:decifra_rotulo/screens/history_screen.dart';
 import 'package:decifra_rotulo/screens/product_detail_screen.dart';
 import 'package:decifra_rotulo/screens/profile_screen.dart';
 import 'package:decifra_rotulo/screens/search_by_code_screen.dart';
+import 'package:decifra_rotulo/services/ad_service.dart';
 import 'package:decifra_rotulo/services/auth_service.dart';
 import 'package:decifra_rotulo/services/open_food_facts_service.dart';
 import 'package:flutter/material.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart'; // Import do AdMob
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -65,6 +65,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
+// -- Widget separado para o conteúdo principal da aba "Escanear" --
 class HomeContent extends StatefulWidget {
   const HomeContent({super.key});
   @override
@@ -75,58 +76,7 @@ class _HomeContentState extends State<HomeContent> {
   final OpenFoodFactsService _apiService = OpenFoodFactsService();
   final AuthService _authService = AuthService();
   bool _isLoading = false;
-
-  // --- LÓGICA DO ANÚNCIO INTERSTICIAL ---
-  InterstitialAd? _interstitialAd;
-  int _scanCounter = 0;
-
-  // ⚠️ IMPORTANTE: Este é o ID de TESTE. NUNCA use seu ID real no desenvolvimento.
-  final String _adUnitId = 'ca-app-pub-3940256099942544/1033173712';
-
-  @override
-  void initState() {
-    super.initState();
-    _loadInterstitialAd();
-  }
-
-  void _loadInterstitialAd() {
-    InterstitialAd.load(
-      adUnitId: _adUnitId,
-      request: const AdRequest(),
-      adLoadCallback: InterstitialAdLoadCallback(
-        onAdLoaded: (ad) {
-          _interstitialAd = ad;
-        },
-        onAdFailedToLoad: (error) {
-          _interstitialAd = null;
-        },
-      ),
-    );
-  }
-
-  void _showInterstitialAd() {
-    if (_interstitialAd != null) {
-      _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
-        onAdDismissedFullScreenContent: (ad) {
-          ad.dispose();
-          _loadInterstitialAd();
-        },
-        onAdFailedToShowFullScreenContent: (ad, error) {
-          ad.dispose();
-          _loadInterstitialAd();
-        },
-      );
-      _interstitialAd!.show();
-      _interstitialAd = null;
-    }
-  }
-  // --- FIM DA LÓGICA DO ANÚNCIO ---
-
-  @override
-  void dispose() {
-    _interstitialAd?.dispose();
-    super.dispose();
-  }
+  final AdService _adService = AdService(); // Instância do AdService
 
   Future<void> _showScannerDialog() async {
     final barcodeController = MobileScannerController(
@@ -190,11 +140,8 @@ class _HomeContentState extends State<HomeContent> {
         await historyBox.put(product.barcode, product);
       }
 
-      _scanCounter++;
-      if (_scanCounter >= 3) {
-        _showInterstitialAd();
-        _scanCounter = 0;
-      }
+      // Chama o contador centralizado
+      _adService.incrementAndShowInterstitialAd();
 
       if (mounted) {
         Navigator.push(

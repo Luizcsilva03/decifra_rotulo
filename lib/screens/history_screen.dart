@@ -4,6 +4,7 @@ import 'package:decifra_rotulo/models/product_model.dart';
 import 'package:decifra_rotulo/screens/product_detail_screen.dart';
 import 'package:decifra_rotulo/screens/profile_screen.dart';
 import 'package:decifra_rotulo/services/auth_service.dart';
+import 'package:decifra_rotulo/widgets/reusable_banner_ad.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
@@ -21,33 +22,31 @@ class _HistoryScreenState extends State<HistoryScreen> {
   @override
   void initState() {
     super.initState();
-    // Inicia o processo de abertura da caixa do usuário
     _historyBoxFuture = _openHistoryBox();
   }
 
-  // Função assíncrona para abrir a caixa correta do usuário
   Future<Box<Product>> _openHistoryBox() async {
     final user = _authService.currentUser;
     if (user != null) {
       return await Hive.openBox<Product>('history_${user.uid}');
     }
-    // Lança um erro se não houver usuário logado
     throw Exception("Usuário não está logado para ver o histórico");
   }
 
   @override
   Widget build(BuildContext context) {
-    // Pega as informações do usuário para o cabeçalho
     final user = _authService.currentUser;
     final String initials = user?.displayName?.isNotEmpty == true
         ? user!.displayName![0].toUpperCase()
         : (user?.email?.isNotEmpty == true ? user!.email![0].toUpperCase() : 'U');
 
     return Scaffold(
+      // --- MUDANÇA 2: Usamos a propriedade correta para o banner ---
+      bottomNavigationBar: const ReusableBannerAd(),
       body: SafeArea(
         child: Column(
           children: [
-            // --- CABEÇALHO CUSTOMIZADO COMPLETO ---
+            // --- CABEÇALHO CUSTOMIZADO ---
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
               child: Row(
@@ -80,22 +79,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
               ),
             ),
             
-            // --- CONTEÚDO DA TELA (LISTA DE HISTÓRICO) ---
+            // --- LISTA DE HISTÓRICO ---
             Expanded(
               child: FutureBuilder<Box<Product>>(
                 future: _historyBoxFuture,
                 builder: (context, snapshot) {
-                  // Enquanto a caixa está abrindo, mostra um loading
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
                   }
-
-                  // Se deu erro ao abrir a caixa
                   if (snapshot.hasError || !snapshot.hasData) {
                     return const Center(child: Text('Não foi possível carregar o histórico.'));
                   }
-
-                  // Se a caixa abriu com sucesso
                   final historyBox = snapshot.data!;
                   return ValueListenableBuilder(
                     valueListenable: historyBox.listenable(),
@@ -105,7 +99,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           child: Text('Nenhum produto no histórico ainda.'),
                         );
                       }
-                      // Converte os produtos para uma lista e inverte para mostrar os mais recentes primeiro
                       final products = box.values.toList().reversed.toList();
                       return ListView.builder(
                         padding: const EdgeInsets.only(top: 10),

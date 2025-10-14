@@ -1,28 +1,41 @@
 // lib/main.dart
 
-import 'package:decifra_rotulo/firebase_options.dart'; // Importa as opções geradas pelo FlutterFire
+import 'package:decifra_rotulo/firebase_options.dart';
 import 'package:decifra_rotulo/models/product_model.dart';
 import 'package:decifra_rotulo/screens/auth_wrapper.dart';
-import 'package:firebase_core/firebase_core.dart'; // Importa o Firebase Core
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart'; // Garanta que este import está aqui
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:decifra_rotulo/services/ad_service.dart';
 
-// 1. Transforma o main em uma função assíncrona
 Future<void> main() async {
-  // 2. Garante que todos os plugins do Flutter estão prontos
   WidgetsFlutterBinding.ensureInitialized();
-
-  // 3. INICIALIZA O FIREBASE (a linha que faltava)
+  
+  // --- INÍCIO DA MUDANÇA ---
+  // Inicializa o Firebase
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // O resto do código que já tínhamos
+ // --- MUDANÇA AQUI ---
+  // Configura os dispositivos de teste
+  RequestConfiguration configuration = RequestConfiguration(
+    testDeviceIds: ["15BBDF3DDFA34C371E7D2BDFB495FA14"],
+  );
+  MobileAds.instance.updateRequestConfiguration(configuration);
+  
+  // Inicializa o AdMob e pré-carrega os anúncios
+  await MobileAds.instance.initialize();
+  final adService = AdService();
+  adService.loadBannerAd();
+  adService.loadInterstitialAd();
+  // --- FIM DA MUDANÇA ---
+
   await Hive.initFlutter();
   Hive.registerAdapter(ProductAdapter());
   Hive.registerAdapter(NutrimentsAdapter());
-  //await Hive.openBox<Product>('product_history');
-
+  
   runApp(const MyApp());
 }
 
