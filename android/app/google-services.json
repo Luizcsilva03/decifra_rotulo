@@ -12,7 +12,20 @@
           "package_name": "com.example.decifra_rotulo"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "6832643373-j8dka4tr8tcts4e1pqt5lltqu783apd7.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.decifra_rotulo",
+            "certificate_hash": "26b13ee428483a1443283965353c497dd284c76b"
+          }
+        },
+        {
+          "client_id": "6832643373-mrj6tuqcssmfl4e85127uqhr03ku4nfd.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCkTh5A8eclEWsvylo5BV-at4VMG547T3o"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "6832643373-mrj6tuqcssmfl4e85127uqhr03ku4nfd.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "6832643373-h7urltm75j790nblbutvqbadp3mijt6h.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.decifraRotulo"
+              }
+            }
+          ]
         }
       }
     }

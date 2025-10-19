@@ -44,6 +44,12 @@ dependencies:
   mask_text_input_formatter: ^2.9.0
   google_mobile_ads: ^6.0.0
 
+  # Pacote principal para o Firebase Messaging
+  firebase_messaging: ^15.0.1 
+
+  # Pacote para mostrar notificações locais (quando o app está aberto)
+  flutter_local_notifications: ^17.2.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
