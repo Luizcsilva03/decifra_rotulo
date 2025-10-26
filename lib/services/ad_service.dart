@@ -1,45 +1,80 @@
 // lib/services/ad_service.dart
 
+import 'dart:math'; // 1. Importa a biblioteca de matemática para o Random
 import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 class AdService {
-  // --- IDs dos Blocos de Anúncios ---
-  // Seus IDs de anúncio reais (usados com dispositivo de teste registrado)
   static const String bannerAdUnitId = 'ca-app-pub-6430479868516102/1706043576';
   static const String interstitialAdUnitId = 'ca-app-pub-6430479868516102/4468594829';
 
-  // --- Singleton Pattern ---
   static final AdService _instance = AdService._internal();
   factory AdService() {
     return _instance;
   }
-  AdService._internal();
 
-  // --- Nossos Anúncios ---
   BannerAd? _bannerAd;
   InterstitialAd? _interstitialAd;
-
-  // Notificador para avisar os widgets quando o banner estiver pronto
   final ValueNotifier<bool> isBannerAdLoaded = ValueNotifier(false);
 
-  // --- CONTADOR CENTRALIZADO ---
+  // --- INÍCIO DAS MUDANÇAS ---
   int _scanCounter = 0;
-  final int _adFrequency = 3; // Define a frequência do anúncio (a cada 3 scans)
+  late int _nextAdScanTarget; // O alvo que precisamos atingir
+  final Random _random = Random(); // O gerador de números aleatórios
+
+  // Construtor privado
+  AdService._internal() {
+    // Define o primeiro "alvo" aleatório assim que o serviço é criado
+    _nextAdScanTarget = _generateNextAdTarget();
+  }
+
+  // Função privada para gerar o próximo alvo
+  int _generateNextAdTarget() {
+    // nextInt(5) gera um número de 0 a 4. Somamos 1 para ter um número de 1 a 5.
+    return _random.nextInt(5) + 1;
+  }
 
   /// Função pública para incrementar o contador e decidir se mostra o anúncio.
   void incrementAndShowInterstitialAd() {
     _scanCounter++;
-    if (_scanCounter >= _adFrequency) {
-      _showInterstitialAd(); // Chama a função privada para mostrar o anúncio
-      _scanCounter = 0; // Reseta o contador
+    
+    // Verifica se o contador atingiu o nosso alvo aleatório
+    if (_scanCounter >= _nextAdScanTarget) {
+      _showInterstitialAd(); 
     }
   }
+  
+  // Mostra o anúncio intersticial (agora é privado)
+  void _showInterstitialAd() {
+    if (_interstitialAd != null) {
+      _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
+        onAdDismissedFullScreenContent: (ad) {
+          _scanCounter = 0; // Reseta o contador
+          _nextAdScanTarget = _generateNextAdTarget(); // Gera um NOVO alvo aleatório!
+          
+          ad.dispose();
+          _interstitialAd = null;
+          loadInterstitialAd(); // Carrega o próximo
+        },
+        onAdFailedToShowFullScreenContent: (ad, error) {
+          // Se falhou ao mostrar, não reseta o contador. Tenta de novo no próximo scan.
+          ad.dispose();
+          _interstitialAd = null;
+          loadInterstitialAd();
+        },
+      );
+      _interstitialAd!.show();
+    } else {
+      // Se não tinha um anúncio pronto, não reseta o contador. Apenas tenta carregar.
+      loadInterstitialAd();
+    }
+  }
+  // --- FIM DAS MUDANÇAS ---
 
-  // Carrega o anúncio de banner
+  // O resto da classe (loadBannerAd, loadInterstitialAd, etc.) permanece o mesmo
+
   void loadBannerAd() {
     if (_bannerAd != null) return;
-
     _bannerAd = BannerAd(
       adUnitId: bannerAdUnitId,
       size: AdSize.banner,
@@ -58,10 +93,8 @@ class AdService {
     _bannerAd?.load();
   }
 
-  // Carrega o anúncio intersticial
   void loadInterstitialAd() {
     if (_interstitialAd != null) return;
-    
     InterstitialAd.load(
       adUnitId: interstitialAdUnitId,
       request: const AdRequest(),
@@ -76,29 +109,6 @@ class AdService {
     );
   }
 
-  // Mostra o anúncio intersticial (agora é privado)
-  void _showInterstitialAd() {
-    if (_interstitialAd != null) {
-      _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
-        onAdDismissedFullScreenContent: (ad) {
-          ad.dispose();
-          _interstitialAd = null;
-          loadInterstitialAd(); // Carrega o próximo
-        },
-        onAdFailedToShowFullScreenContent: (ad, error) {
-          ad.dispose();
-          _interstitialAd = null;
-          loadInterstitialAd();
-        },
-      );
-      _interstitialAd!.show();
-    } else {
-      // Se não tinha um anúncio pronto, já tenta carregar o próximo
-      loadInterstitialAd();
-    }
-  }
-
-  // Permite que os widgets peguem o banner que já está pronto
   BannerAd? getBannerAd() {
     return _bannerAd;
   }
