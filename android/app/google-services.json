@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "6832643373-6uqpffi1mbo5o2tlelicumdbet3jpnms.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.decifra_rotulo",
+            "certificate_hash": "8357161d3823ae2593be1aa617af1e8aac98b87e"
+          }
+        },
+        {
           "client_id": "6832643373-j8dka4tr8tcts4e1pqt5lltqu783apd7.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {

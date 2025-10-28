@@ -1,3 +1,7 @@
+// --- IMPORTAÇÕES NECESSÁRIAS ADICIONADAS NO TOPO ---
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     // START: FlutterFire Configuration
@@ -8,13 +12,21 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// --- LÓGICA DE LEITURA DA CHAVE MOVIDA PARA CÁ ---
+val keyPropertiesFile = rootProject.file("key.properties") // Caminho corrigido
+val keyProperties = Properties()
+if (keyPropertiesFile.exists()) {
+    keyProperties.load(FileInputStream(keyPropertiesFile))
+}
+// --- FIM DA LÓGICA DA CHAVE ---
+
 android {
     namespace = "com.example.decifra_rotulo"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
-        isCoreLibraryDesugaringEnabled = true // <-- ADICIONE ESTA LINHA
+        isCoreLibraryDesugaringEnabled = true 
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
@@ -23,22 +35,33 @@ android {
         jvmTarget = JavaVersion.VERSION_11.toString()
     }
 
+    // --- CONFIGURAÇÃO DE ASSINATURA QUE JÁ TINHA SIDO ADICIONADA ---
+    signingConfigs {
+        create("release") {
+            keyAlias = keyProperties["keyAlias"] as String?
+            keyPassword = keyProperties["keyPassword"] as String?
+            storeFile = keyProperties["storeFile"]?.let { rootProject.file(it) }
+            storePassword = keyProperties["storePassword"] as String?
+        }
+    }
+    // --- FIM DA CONFIGURAÇÃO DE ASSINATURA ---
+
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.example.decifra_rotulo"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = 23
+        minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
 
     buildTypes {
-        release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
+        // Bloco debug mantido para testes
+        getByName("debug") {
             signingConfig = signingConfigs.getByName("debug")
+        }
+        // Bloco release modificado para usar a chave de produção
+        getByName("release") {
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 }
@@ -46,7 +69,7 @@ android {
 flutter {
     source = "../.."
 }
-// --- ADICIONE ESTE BLOCO INTEIRO NO FINAL DO ARQUIVO ---
+
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 }
