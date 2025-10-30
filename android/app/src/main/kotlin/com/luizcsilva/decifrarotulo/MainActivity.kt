@@ -1,4 +1,4 @@
-package com.example.decifra_rotulo
+package com.luizcsilva.decifrarotulo
 
 import io.flutter.embedding.android.FlutterActivity
 

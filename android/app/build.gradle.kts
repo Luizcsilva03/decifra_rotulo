@@ -21,7 +21,7 @@ if (keyPropertiesFile.exists()) {
 // --- FIM DA LÓGICA DA CHAVE ---
 
 android {
-    namespace = "com.example.decifra_rotulo"
+    namespace = "com.luizcsilva.decifrarotulo"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -47,7 +47,7 @@ android {
     // --- FIM DA CONFIGURAÇÃO DE ASSINATURA ---
 
     defaultConfig {
-        applicationId = "com.example.decifra_rotulo"
+        applicationId = "com.luizcsilva.decifrarotulo"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
