@@ -66,6 +66,22 @@
       },
       "oauth_client": [
         {
+          "client_id": "6832643373-ednppjdccm3kg6osm90k0dhrtn4srcbl.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.luizcsilva.decifrarotulo",
+            "certificate_hash": "8357161d3823ae2593be1aa617af1e8aac98b87e"
+          }
+        },
+        {
+          "client_id": "6832643373-m7b802vq5qsvhp4kvsnac2pu41hc0qrt.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.luizcsilva.decifrarotulo",
+            "certificate_hash": "26b13ee428483a1443283965353c497dd284c76b"
+          }
+        },
+        {
           "client_id": "6832643373-mrj6tuqcssmfl4e85127uqhr03ku4nfd.apps.googleusercontent.com",
           "client_type": 3
         }
@@ -91,7 +107,8 @@
             }
           ]
         }
-      }
+      },
+      "admob_app_id": "ca-app-pub-6430479868516102~6010258275"
     }
   ],
   "configuration_version": "1"

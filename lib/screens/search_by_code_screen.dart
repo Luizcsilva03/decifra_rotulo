@@ -4,6 +4,7 @@ import 'package:decifra_rotulo/models/product_model.dart';
 import 'package:decifra_rotulo/screens/product_detail_screen.dart';
 import 'package:decifra_rotulo/screens/profile_screen.dart';
 import 'package:decifra_rotulo/services/ad_service.dart';
+import 'package:decifra_rotulo/services/api_exceptions.dart'; // <-- IMPORTAÇÃO CORRETA
 import 'package:decifra_rotulo/services/auth_service.dart';
 import 'package:decifra_rotulo/services/open_food_facts_service.dart';
 import 'package:flutter/material.dart';
@@ -23,7 +24,7 @@ class _SearchByCodeScreenState extends State<SearchByCodeScreen> {
   final _formKey = GlobalKey<FormState>();
   final _apiService = OpenFoodFactsService();
   final _authService = AuthService();
-  final _adService = AdService(); // Instância do AdService
+  final _adService = AdService();
   bool _isLoading = false;
 
   final maskFormatter = MaskTextInputFormatter(
@@ -38,6 +39,7 @@ class _SearchByCodeScreenState extends State<SearchByCodeScreen> {
 
     setState(() => _isLoading = true);
 
+    // --- BLOCO TRY/CATCH CORRIGIDO E PADRONIZADO ---
     try {
       final product = await _apiService.getProduct(maskFormatter.getUnmaskedText());
       final user = _authService.currentUser;
@@ -46,7 +48,6 @@ class _SearchByCodeScreenState extends State<SearchByCodeScreen> {
         await historyBox.put(product.barcode, product);
       }
 
-      // Chama o contador centralizado
       _adService.incrementAndShowInterstitialAd();
 
       if (mounted) {
@@ -58,6 +59,10 @@ class _SearchByCodeScreenState extends State<SearchByCodeScreen> {
           ),
         );
       }
+    } on ProductNotFoundException catch (e) {
+      _showErrorDialog(e.message); // Mensagem amigável
+    } on NetworkException catch (e) {
+      _showErrorDialog(e.message); // Mensagem amigável
     } catch (e) {
       _showErrorDialog('Produto não encontrado ou código inválido.');
     } finally {
@@ -65,6 +70,7 @@ class _SearchByCodeScreenState extends State<SearchByCodeScreen> {
         setState(() => _isLoading = false);
       }
     }
+    // --- FIM DA CORREÇÃO ---
   }
 
   void _showErrorDialog(String message) {

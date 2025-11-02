@@ -6,6 +6,7 @@ import 'package:decifra_rotulo/screens/product_detail_screen.dart';
 import 'package:decifra_rotulo/screens/profile_screen.dart';
 import 'package:decifra_rotulo/screens/search_by_code_screen.dart';
 import 'package:decifra_rotulo/services/ad_service.dart';
+import 'package:decifra_rotulo/services/api_exceptions.dart'; // <-- IMPORTAÇÃO CORRETA
 import 'package:decifra_rotulo/services/auth_service.dart';
 import 'package:decifra_rotulo/services/open_food_facts_service.dart';
 import 'package:flutter/material.dart';
@@ -76,7 +77,7 @@ class _HomeContentState extends State<HomeContent> {
   final OpenFoodFactsService _apiService = OpenFoodFactsService();
   final AuthService _authService = AuthService();
   bool _isLoading = false;
-  final AdService _adService = AdService(); // Instância do AdService
+  final AdService _adService = AdService();
 
   Future<void> _showScannerDialog() async {
     final barcodeController = MobileScannerController(
@@ -132,6 +133,8 @@ class _HomeContentState extends State<HomeContent> {
     if (barcode == null || barcode.isEmpty) return;
 
     setState(() => _isLoading = true);
+
+    // --- BLOCO TRY/CATCH CORRIGIDO E PADRONIZADO ---
     try {
       final product = await _apiService.getProduct(barcode);
       final user = _authService.currentUser;
@@ -151,13 +154,19 @@ class _HomeContentState extends State<HomeContent> {
           ),
         );
       }
+    } on ProductNotFoundException catch (e) {
+      _showErrorDialog(e.message); // Ex: "Este produto ainda não foi cadastrado..."
+    } on NetworkException catch (e) {
+      _showErrorDialog(e.message); // Ex: "Falha na comunicação..."
     } catch (e) {
-      _showErrorDialog('Produto não encontrado ou erro na API: ${e.toString()}');
+      // Fallback para qualquer outro erro inesperado
+      _showErrorDialog('Ocorreu um erro inesperado. Tente novamente.');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
       }
     }
+    // --- FIM DA CORREÇÃO ---
   }
 
   void _showErrorDialog(String message) {

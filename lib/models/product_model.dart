@@ -17,6 +17,9 @@ class Product extends HiveObject {
   final String barcode;
   @HiveField(5)
   final String ingredientsText;
+  // --- MUDANÇA 1: Novo campo para o Score ---
+  @HiveField(6)
+  final String? nutritionGrades;
 
   Product({
     required this.productName,
@@ -25,6 +28,7 @@ class Product extends HiveObject {
     required this.nutriments,
     required this.barcode,
     required this.ingredientsText,
+    this.nutritionGrades, // <-- Adicionado ao construtor
   });
 
   factory Product.fromJson(Map<String, dynamic> json) {
@@ -38,6 +42,8 @@ class Product extends HiveObject {
       ingredientsText: productData['ingredients_text_pt'] ??
           productData['ingredients_text'] ??
           'Ingredientes não informados.',
+      // --- MUDANÇA 2: Ler o Score do JSON ---
+      nutritionGrades: productData['nutrition_grades'] as String?,
     );
   }
 }
@@ -56,6 +62,7 @@ class Nutriments {
   final double? proteins;
   @HiveField(5)
   final String? salt;
+  
 
   Nutriments({
     this.energyKcal,
