@@ -16,7 +16,10 @@ class AuthService {
   final FirebaseStorage _storage = FirebaseStorage.instance;
   final FirebaseMessaging _fcm = FirebaseMessaging.instance; // <-- 2. Cria a instância
 
-  Stream<User?> get user => _auth.authStateChanges();
+  // --- MUDANÇA CRUCIAL AQUI ---
+  // authStateChanges() só reage a login/logout.
+  // userChanges() reage a login/logout E a mudanças no perfil (ex: updatePhotoURL)
+  Stream<User?> get user => _auth.userChanges();
   User? get currentUser => _auth.currentUser;
 
   // --- 3. NOVA FUNÇÃO: Pega o token e salva no Firestore ---

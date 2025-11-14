@@ -6,9 +6,10 @@ import 'package:decifra_rotulo/screens/product_detail_screen.dart';
 import 'package:decifra_rotulo/screens/profile_screen.dart';
 import 'package:decifra_rotulo/screens/search_by_code_screen.dart';
 import 'package:decifra_rotulo/services/ad_service.dart';
-import 'package:decifra_rotulo/services/api_exceptions.dart'; // <-- IMPORTAÇÃO CORRETA
+import 'package:decifra_rotulo/services/api_exceptions.dart';
 import 'package:decifra_rotulo/services/auth_service.dart';
 import 'package:decifra_rotulo/services/open_food_facts_service.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // <-- Import necessário
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
@@ -66,7 +67,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// -- Widget separado para o conteúdo principal da aba "Escanear" --
 class HomeContent extends StatefulWidget {
   const HomeContent({super.key});
   @override
@@ -78,14 +78,13 @@ class _HomeContentState extends State<HomeContent> {
   final AuthService _authService = AuthService();
   bool _isLoading = false;
   final AdService _adService = AdService();
+  final barcodeController = MobileScannerController(
+    facing: CameraFacing.back,
+    torchEnabled: false,
+    detectionSpeed: DetectionSpeed.normal,
+  );
 
   Future<void> _showScannerDialog() async {
-    final barcodeController = MobileScannerController(
-      facing: CameraFacing.back,
-      torchEnabled: false,
-      detectionSpeed: DetectionSpeed.normal,
-    );
-
     final barcode = await showDialog<String>(
       context: context,
       builder: (context) => Dialog(
@@ -134,7 +133,6 @@ class _HomeContentState extends State<HomeContent> {
 
     setState(() => _isLoading = true);
 
-    // --- BLOCO TRY/CATCH CORRIGIDO E PADRONIZADO ---
     try {
       final product = await _apiService.getProduct(barcode);
       final user = _authService.currentUser;
@@ -143,7 +141,6 @@ class _HomeContentState extends State<HomeContent> {
         await historyBox.put(product.barcode, product);
       }
 
-      // Chama o contador centralizado
       _adService.incrementAndShowInterstitialAd();
 
       if (mounted) {
@@ -155,18 +152,16 @@ class _HomeContentState extends State<HomeContent> {
         );
       }
     } on ProductNotFoundException catch (e) {
-      _showErrorDialog(e.message); // Ex: "Este produto ainda não foi cadastrado..."
+      _showErrorDialog(e.message);
     } on NetworkException catch (e) {
-      _showErrorDialog(e.message); // Ex: "Falha na comunicação..."
+      _showErrorDialog(e.message);
     } catch (e) {
-      // Fallback para qualquer outro erro inesperado
       _showErrorDialog('Ocorreu um erro inesperado. Tente novamente.');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
       }
     }
-    // --- FIM DA CORREÇÃO ---
   }
 
   void _showErrorDialog(String message) {
@@ -186,12 +181,13 @@ class _HomeContentState extends State<HomeContent> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final user = _authService.currentUser;
-    final String initials = user?.displayName?.isNotEmpty == true
-        ? user!.displayName![0].toUpperCase()
-        : (user?.email?.isNotEmpty == true ? user!.email![0].toUpperCase() : 'U');
+  void dispose() {
+    barcodeController.dispose();
+    super.dispose();
+  }
 
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
         child: Stack(
@@ -242,27 +238,43 @@ class _HomeContentState extends State<HomeContent> {
                       ),
                     ),
             ),
-            Align(
-              alignment: Alignment.topRight,
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: IconButton(
-                  icon: CircleAvatar(
-                    radius: 18,
-                    backgroundColor: Colors.grey.shade200,
-                    child: Text(
-                      initials,
-                      style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.teal),
+            
+            // --- ÍCONE DE PERFIL REATIVO ---
+            StreamBuilder<User?>(
+              stream: _authService.user, // Ouve o stream userChanges()
+              builder: (context, snapshot) {
+                final user = snapshot.data;
+                final String initials = user?.displayName?.isNotEmpty == true
+                    ? user!.displayName![0].toUpperCase()
+                    : (user?.email?.isNotEmpty == true ? user!.email![0].toUpperCase() : '?');
+                final photoUrl = user?.photoURL;
+
+                return Align(
+                  alignment: Alignment.topRight,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: IconButton(
+                      icon: CircleAvatar(
+                        radius: 18,
+                        backgroundColor: Colors.grey.shade200,
+                        backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
+                        child: photoUrl == null 
+                          ? Text(
+                              initials,
+                              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.teal),
+                            )
+                          : null,
+                      ),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const ProfileScreen()),
+                        );
+                      },
                     ),
                   ),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const ProfileScreen()),
-                    );
-                  },
-                ),
-              ),
+                );
+              }
             ),
           ],
         ),

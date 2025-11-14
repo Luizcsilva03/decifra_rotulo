@@ -5,6 +5,7 @@ import 'package:decifra_rotulo/screens/product_detail_screen.dart';
 import 'package:decifra_rotulo/screens/profile_screen.dart';
 import 'package:decifra_rotulo/services/auth_service.dart';
 import 'package:decifra_rotulo/widgets/reusable_banner_ad.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // <-- Import necessário
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
@@ -30,53 +31,63 @@ class _HistoryScreenState extends State<HistoryScreen> {
     if (user != null) {
       return await Hive.openBox<Product>('history_${user.uid}');
     }
-    throw Exception("Usuário não está logado para ver o histórico");
+    // Lida com o caso raro de usuário nulo ao abrir a tela
+    return await Hive.openBox<Product>('empty_history_box_${DateTime.now().millisecondsSinceEpoch}');
   }
 
   @override
   Widget build(BuildContext context) {
-    final user = _authService.currentUser;
-    final String initials = user?.displayName?.isNotEmpty == true
-        ? user!.displayName![0].toUpperCase()
-        : (user?.email?.isNotEmpty == true ? user!.email![0].toUpperCase() : 'U');
-
     return Scaffold(
-      // --- MUDANÇA 2: Usamos a propriedade correta para o banner ---
       bottomNavigationBar: const ReusableBannerAd(),
       body: SafeArea(
         child: Column(
           children: [
-            // --- CABEÇALHO CUSTOMIZADO ---
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
+            
+            // --- CABEÇALHO REATIVO ---
+            StreamBuilder<User?>(
+              stream: _authService.user, // Ouve o stream userChanges()
+              builder: (context, snapshot) {
+                final user = snapshot.data;
+                final String initials = user?.displayName?.isNotEmpty == true
+                    ? user!.displayName![0].toUpperCase()
+                    : (user?.email?.isNotEmpty == true ? user!.email![0].toUpperCase() : '?');
+                final photoUrl = user?.photoURL;
+                
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Image.asset('assets/logo.png', height: 30),
-                      const SizedBox(width: 10),
-                      const Text('Decifra Rótulo', style: TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.bold)),
+                      Row(
+                        children: [
+                          Image.asset('assets/logo.png', height: 30),
+                          const SizedBox(width: 10),
+                          const Text('Decifra Rótulo', style: TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                      IconButton(
+                        icon: CircleAvatar(
+                          radius: 16,
+                          backgroundColor: Colors.grey.shade200,
+                          backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
+                          child: photoUrl == null 
+                            ? Text(
+                                initials,
+                                style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.teal),
+                              )
+                            : null,
+                        ),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const ProfileScreen()),
+                          );
+                        },
+                      ),
                     ],
                   ),
-                  IconButton(
-                    icon: CircleAvatar(
-                      radius: 16,
-                      backgroundColor: Colors.grey.shade200,
-                      child: Text(
-                        initials,
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.teal),
-                      ),
-                    ),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const ProfileScreen()),
-                      );
-                    },
-                  ),
-                ],
-              ),
+                );
+              }
             ),
             
             // --- LISTA DE HISTÓRICO ---
@@ -96,7 +107,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     builder: (context, Box<Product> box, _) {
                       if (box.values.isEmpty) {
                         return const Center(
-                          child: Text('Nenhum produto no histórico ainda.'),
+                          child: Padding(
+                            padding: EdgeInsets.all(16.0),
+                            child: Text(
+                              'Seu histórico de produtos escaneados aparecerá aqui.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(fontSize: 16, color: Colors.grey),
+                            ),
+                          ),
                         );
                       }
                       final products = box.values.toList().reversed.toList();

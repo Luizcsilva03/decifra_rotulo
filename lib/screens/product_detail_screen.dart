@@ -20,7 +20,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
   @override
   void initState() {
     super.initState();
-    // Continua com 3 abas, o índice 0 (padrão) agora será "Nutricional"
     _tabController = TabController(length: 3, vsync: this);
   }
 
@@ -60,10 +59,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
       bottomNavigationBar: const ReusableBannerAd(),
       
       body: SingleChildScrollView(
+        // Adiciona um padding na parte de baixo para o conteúdo não "grudar" no banner
+        padding: const EdgeInsets.only(bottom: 60), 
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            const SizedBox(height: kToolbarHeight + 20),
+            SizedBox(height: kToolbarHeight + 20),
             
             // --- PARTE SUPERIOR (IMAGEM E TÍTULO) ---
             Center(
@@ -105,7 +106,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
             ),
             const SizedBox(height: 24),
             
-            // --- MUDANÇA NA ORDEM DAS ABAS ---
+            // --- AS 3 ABAS ESTILIZADAS (NA NOVA ORDEM) ---
             Container(
               color: Colors.teal,
               child: TabBar(
@@ -115,17 +116,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
                 indicatorColor: Colors.white,
                 indicatorWeight: 3.0,
                 tabs: const [
-                  // 1. Nutricional
                   Tab(
                     icon: Icon(Icons.bar_chart_rounded),
                     text: 'Nutricional',
                   ),
-                  // 2. Ingredientes
                   Tab(
                     icon: Icon(Icons.format_list_bulleted_rounded),
                     text: 'Ingredientes',
                   ),
-                  // 3. Nutri-Score
                   Tab(
                     icon: Icon(Icons.shield_rounded),
                     text: 'Nutri-Score',
@@ -134,17 +132,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
               ),
             ),
             
-            // --- MUDANÇA NA ORDEM DO CONTEÚDO ---
+            // --- CONTEÚDO DAS 3 ABAS ---
+            // Usamos um SizedBox/TabBarView para definir uma altura
+            // e evitar erros de layout dentro do SingleChildScrollView
             SizedBox(
-              height: 500, // Altura fixa para o TabBarView
+              height: 500, // Ajuste esta altura se o conteúdo for cortado
               child: TabBarView(
                 controller: _tabController,
+                physics: const NeverScrollableScrollPhysics(), // Desabilita o scroll lateral das abas
                 children: [
-                  // 1. Conteúdo Nutricional
                   _buildNutritionsTab(context),
-                  // 2. Conteúdo Ingredientes
                   _buildIngredientsTab(context),
-                  // 3. Conteúdo Nutri-Score
                   _buildScoreTab(context),
                 ],
               ),
@@ -160,7 +158,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
     final score = widget.product.nutritionGrades;
     final color = _getNutriScoreColor(score);
     
-    // --- CORREÇÃO AQUI: Verifica se o score é nulo OU "unknown" ---
+    // Verifica se o score é nulo OU "unknown"
     final bool isScoreAvailable = score != null && score.toLowerCase() != 'unknown';
     
     final String description = isScoreAvailable 
@@ -183,17 +181,16 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
             decoration: BoxDecoration(
               color: color,
               borderRadius: BorderRadius.circular(12),
-              // Só mostra a sombra se o score estiver disponível
               boxShadow: isScoreAvailable ? [
                 BoxShadow(
-                  color: color.withAlpha(128),
+                  color: color.withAlpha(128), // Correção do 'withOpacity'
                   blurRadius: 8,
                   offset: const Offset(0, 4),
                 ),
               ] : null,
             ),
             child: Text(
-              // --- CORREÇÃO AQUI: Mostra "N/A" em vez de "UNKNOWN" ---
+              // Mostra "N/A" em vez de "UNKNOWN"
               isScoreAvailable ? score.toUpperCase() : 'N/A',
               style: const TextStyle(
                 fontSize: 48,
@@ -221,8 +218,42 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
     );
   }
   
-  // --- WIDGET PARA A ABA "INFORMACÃO NUTRICIONAL" ---
+  // --- WIDGET PARA A ABA "INFORMACÃO NUTRICIONAL" (DINÂMICO) ---
   Widget _buildNutritionsTab(BuildContext context) {
+    final nutriments = widget.product.nutriments;
+    
+    // 1. Criamos uma lista de todos os nutrientes que queremos mostrar
+    final List<Map<String, dynamic>> nutrientList = [
+      {'label': 'Calorias', 'value': nutriments.energyKcal, 'unit': 'kcal'},
+      {'label': 'Gorduras', 'value': nutriments.fat, 'unit': 'g'},
+      {'label': 'Carboidratos', 'value': nutriments.carbohydrates, 'unit': 'g'},
+      {'label': 'Açúcares', 'value': nutriments.sugars, 'unit': 'g'},
+      {'label': 'Proteínas', 'value': nutriments.proteins, 'unit': 'g'},
+      {'label': 'Sal', 'value': nutriments.salt, 'unit': 'g'},
+    ];
+
+    // 2. Filtramos a lista para incluir apenas os nutrientes que TÊM valor
+    final List<Widget> nutrientRows = [];
+    for (var nutrient in nutrientList) {
+      if (nutrient['value'] != null) {
+        nutrientRows.add(
+          _buildNutrimentRow(
+            nutrient['label'], 
+            nutrient['value'], 
+            nutrient['unit']
+          )
+        );
+        // Adiciona um divisor
+        nutrientRows.add(const Divider(height: 20));
+      }
+    }
+    
+    // Remove o último divisor desnecessário
+    if (nutrientRows.isNotEmpty) {
+      nutrientRows.removeLast();
+    }
+
+    // 3. Renderizamos a lista
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -241,17 +272,20 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.teal),
                   ),
                   const SizedBox(height: 16),
-                  _buildNutrimentRow('Calorias', widget.product.nutriments.energyKcal, 'kcal'),
-                  const Divider(height: 20),
-                  _buildNutrimentRow('Gorduras', widget.product.nutriments.fat, 'g'),
-                  const Divider(height: 20),
-                  _buildNutrimentRow('Carboidratos', widget.product.nutriments.carbohydrates, 'g'),
-                  const Divider(height: 20),
-                  _buildNutrimentRow('Açúcares', widget.product.nutriments.sugars, 'g'),
-                  const Divider(height: 20),
-                  _buildNutrimentRow('Proteínas', widget.product.nutriments.proteins, 'g'),
-                  const Divider(height: 20),
-                  _buildNutrimentRow('Sal', widget.product.nutriments.salt, 'g'),
+                  
+                  // Se a lista de rows estiver vazia, mostra a mensagem.
+                  if (nutrientRows.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 20.0),
+                      child: Text(
+                        'Informações nutricionais não disponíveis para este produto.',
+                        style: TextStyle(fontSize: 16, color: Colors.black54),
+                        textAlign: TextAlign.center,
+                      ),
+                    )
+                  else
+                    // Senão, renderiza a lista dinâmica de widgets
+                    Column(children: nutrientRows),
                 ],
               ),
             ),
