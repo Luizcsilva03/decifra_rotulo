@@ -69,31 +69,73 @@ class NutrimentsAdapter extends TypeAdapter<Nutriments> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return Nutriments(
-      energyKcal: fields[0] as double?,
-      fat: fields[1] as double?,
-      carbohydrates: fields[2] as double?,
-      sugars: fields[3] as double?,
-      proteins: fields[4] as double?,
-      salt: fields[5] as String?,
+      dataPer: fields[0] as String,
+      energyKcal: fields[1] as double?,
+      fat: fields[2] as double?,
+      saturatedFat: fields[3] as double?,
+      transFat: fields[4] as double?,
+      carbohydrates: fields[5] as double?,
+      sugars: fields[6] as double?,
+      fiber: fields[7] as double?,
+      proteins: fields[8] as double?,
+      salt: fields[9] as String?,
+      sodium: fields[10] as double?,
+      vitaminA: fields[11] as double?,
+      vitaminC: fields[12] as double?,
+      vitaminD: fields[13] as double?,
+      vitaminB1: fields[14] as double?,
+      vitaminB6: fields[15] as double?,
+      vitaminB12: fields[16] as double?,
+      calcium: fields[17] as double?,
+      iron: fields[18] as double?,
+      magnesium: fields[19] as double?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Nutriments obj) {
     writer
-      ..writeByte(6)
+      ..writeByte(20)
       ..writeByte(0)
-      ..write(obj.energyKcal)
+      ..write(obj.dataPer)
       ..writeByte(1)
-      ..write(obj.fat)
+      ..write(obj.energyKcal)
       ..writeByte(2)
-      ..write(obj.carbohydrates)
+      ..write(obj.fat)
       ..writeByte(3)
-      ..write(obj.sugars)
+      ..write(obj.saturatedFat)
       ..writeByte(4)
-      ..write(obj.proteins)
+      ..write(obj.transFat)
       ..writeByte(5)
-      ..write(obj.salt);
+      ..write(obj.carbohydrates)
+      ..writeByte(6)
+      ..write(obj.sugars)
+      ..writeByte(7)
+      ..write(obj.fiber)
+      ..writeByte(8)
+      ..write(obj.proteins)
+      ..writeByte(9)
+      ..write(obj.salt)
+      ..writeByte(10)
+      ..write(obj.sodium)
+      ..writeByte(11)
+      ..write(obj.vitaminA)
+      ..writeByte(12)
+      ..write(obj.vitaminC)
+      ..writeByte(13)
+      ..write(obj.vitaminD)
+      ..writeByte(14)
+      ..write(obj.vitaminB1)
+      ..writeByte(15)
+      ..write(obj.vitaminB6)
+      ..writeByte(16)
+      ..write(obj.vitaminB12)
+      ..writeByte(17)
+      ..write(obj.calcium)
+      ..writeByte(18)
+      ..write(obj.iron)
+      ..writeByte(19)
+      ..write(obj.magnesium);
   }
 
   @override
