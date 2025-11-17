@@ -1,4 +1,4 @@
-// --- IMPORTAÇÕES NECESSÁRIAS ADICIONADAS NO TOPO ---
+// --- IMPORTAÇÕES NECESSÁRIAS NO TOPO ---
 import java.util.Properties
 import java.io.FileInputStream
 
@@ -12,8 +12,8 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-// --- LÓGICA DE LEITURA DA CHAVE MOVIDA PARA CÁ ---
-val keyPropertiesFile = rootProject.file("key.properties") // Caminho corrigido
+// --- LÓGICA DE LEITURA DA CHAVE ---
+val keyPropertiesFile = rootProject.file("key.properties")
 val keyProperties = Properties()
 if (keyPropertiesFile.exists()) {
     keyProperties.load(FileInputStream(keyPropertiesFile))
@@ -35,7 +35,7 @@ android {
         jvmTarget = JavaVersion.VERSION_11.toString()
     }
 
-    // --- CONFIGURAÇÃO DE ASSINATURA QUE JÁ TINHA SIDO ADICIONADA ---
+    // --- CONFIGURAÇÃO DE ASSINATURA ---
     signingConfigs {
         create("release") {
             keyAlias = keyProperties["keyAlias"] as String?
@@ -48,10 +48,16 @@ android {
 
     defaultConfig {
         applicationId = "com.luizcsilva.decifrarotulo"
-        minSdk = flutter.minSdkVersion
+        // AJUSTE 1: Fixar minSdk em 23 para evitar problemas com notificações
+        minSdk = flutter.minSdkVersion 
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        
+        // AJUSTE 2: Filtros de arquitetura para garantir compatibilidade (ajuda no erro de 16KB)
+        ndk {
+            abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86_64"))
+        }
     }
 
     buildTypes {
@@ -62,6 +68,13 @@ android {
         // Bloco release modificado para usar a chave de produção
         getByName("release") {
             signingConfig = signingConfigs.getByName("release")
+        }
+    }
+    
+    // AJUSTE 3: Garante o empacotamento legado (já estava no seu, mantive pois é crucial)
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
         }
     }
 }
