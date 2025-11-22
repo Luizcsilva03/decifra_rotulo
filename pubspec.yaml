@@ -1,7 +1,7 @@
 name: decifra_rotulo
 description: "Decifra Rótulo - Escaneie produtos e descubra o que você está consumindo."
 publish_to: 'none'
-version: 1.0.8+9 
+version: 1.0.9+10 
 
 environment:
   sdk: '>=3.4.1 <4.0.0'

@@ -4,9 +4,10 @@ import 'package:decifra_rotulo/models/product_model.dart';
 import 'package:decifra_rotulo/screens/product_detail_screen.dart';
 import 'package:decifra_rotulo/screens/profile_screen.dart';
 import 'package:decifra_rotulo/services/ad_service.dart';
-import 'package:decifra_rotulo/services/api_exceptions.dart'; // <-- IMPORTAÇÃO CORRETA
+import 'package:decifra_rotulo/services/api_exceptions.dart';
 import 'package:decifra_rotulo/services/auth_service.dart';
 import 'package:decifra_rotulo/services/open_food_facts_service.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // <-- Import necessário para o User
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
@@ -39,7 +40,6 @@ class _SearchByCodeScreenState extends State<SearchByCodeScreen> {
 
     setState(() => _isLoading = true);
 
-    // --- BLOCO TRY/CATCH CORRIGIDO E PADRONIZADO ---
     try {
       final product = await _apiService.getProduct(maskFormatter.getUnmaskedText());
       final user = _authService.currentUser;
@@ -60,9 +60,9 @@ class _SearchByCodeScreenState extends State<SearchByCodeScreen> {
         );
       }
     } on ProductNotFoundException catch (e) {
-      _showErrorDialog(e.message); // Mensagem amigável
+      _showErrorDialog(e.message);
     } on NetworkException catch (e) {
-      _showErrorDialog(e.message); // Mensagem amigável
+      _showErrorDialog(e.message);
     } catch (e) {
       _showErrorDialog('Produto não encontrado ou código inválido.');
     } finally {
@@ -70,7 +70,6 @@ class _SearchByCodeScreenState extends State<SearchByCodeScreen> {
         setState(() => _isLoading = false);
       }
     }
-    // --- FIM DA CORREÇÃO ---
   }
 
   void _showErrorDialog(String message) {
@@ -97,10 +96,8 @@ class _SearchByCodeScreenState extends State<SearchByCodeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = _authService.currentUser;
-    final String initials = user?.displayName?.isNotEmpty == true
-        ? user!.displayName![0].toUpperCase()
-        : (user?.email?.isNotEmpty == true ? user!.email![0].toUpperCase() : 'U');
+    // Removemos a leitura estática do usuário daqui.
+    // Agora ela acontece dentro do StreamBuilder abaixo.
 
     return Scaffold(
       body: SafeArea(
@@ -166,28 +163,45 @@ class _SearchByCodeScreenState extends State<SearchByCodeScreen> {
                 ),
               ),
             ),
-            Align(
-              alignment: Alignment.topRight,
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: IconButton(
-                  icon: CircleAvatar(
-                    radius: 18,
-                    backgroundColor: Colors.grey.shade200,
-                    child: Text(
-                      initials,
-                      style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.teal),
+            
+            // --- CORREÇÃO AQUI: ÍCONE DE PERFIL REATIVO ---
+            StreamBuilder<User?>(
+              stream: _authService.user, // Ouve as mudanças (foto, login, etc)
+              builder: (context, snapshot) {
+                final user = snapshot.data;
+                final String initials = user?.displayName?.isNotEmpty == true
+                    ? user!.displayName![0].toUpperCase()
+                    : (user?.email?.isNotEmpty == true ? user!.email![0].toUpperCase() : 'U');
+                final photoUrl = user?.photoURL;
+
+                return Align(
+                  alignment: Alignment.topRight,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: IconButton(
+                      icon: CircleAvatar(
+                        radius: 18,
+                        backgroundColor: Colors.grey.shade200,
+                        backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
+                        child: photoUrl == null 
+                          ? Text(
+                              initials,
+                              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.teal),
+                            )
+                          : null,
+                      ),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const ProfileScreen()),
+                        );
+                      },
                     ),
                   ),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const ProfileScreen()),
-                    );
-                  },
-                ),
-              ),
+                );
+              }
             ),
+            // --- FIM DA CORREÇÃO ---
           ],
         ),
       ),

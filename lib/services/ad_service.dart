@@ -5,8 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 class AdService {
-  static const String bannerAdUnitId = 'ca-app-pub-6430479868516102/1706043576';
-  static const String interstitialAdUnitId = 'ca-app-pub-6430479868516102/4468594829';
+  static const String bannerAdUnitId = 'ca-app-pub-6430479868516102/8545727510';
+  static const String interstitialAdUnitId = 'ca-app-pub-6430479868516102/7228760507';
 
   static final AdService _instance = AdService._internal();
   factory AdService() {
