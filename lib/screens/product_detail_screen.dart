@@ -19,7 +19,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
   }
 
   @override
@@ -108,7 +108,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
+            _buildScoresRow(context),
+            const SizedBox(height: 16),
             
             // --- ABAS ---
             Container(
@@ -122,7 +124,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
                 tabs: const [
                   Tab(icon: Icon(Icons.bar_chart_rounded), text: 'Nutricional'),
                   Tab(icon: Icon(Icons.format_list_bulleted_rounded), text: 'Ingredientes'),
-                  Tab(icon: Icon(Icons.shield_rounded), text: 'Nutri-Score'),
                 ],
               ),
             ),
@@ -134,7 +135,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
                 return [
                   _buildNutritionsTab(context),
                   _buildIngredientsTab(context),
-                  _buildScoreTab(context),
                 ][_tabController.index];
               },
             ),
@@ -144,64 +144,69 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
     );
   }
 
-  // --- WIDGET PARA A ABA "SCORE" ---
-  // (Removido o SingleChildScrollView interno)
-  Widget _buildScoreTab(BuildContext context) {
-    final score = widget.product.nutritionGrades;
-    final color = _getNutriScoreColor(score);
-    final bool isScoreAvailable = score != null && score.toLowerCase() != 'unknown';
-    final String description = isScoreAvailable 
-        ? 'Este produto tem uma classificação Nutri-Score ${score.toUpperCase()}.' 
-        : 'O Nutri-Score não está disponível para este produto.';
+  // --- MÉTODOS DE COR E UI PARA SCORES ---
+  Color _getNovaColor(int? score) {
+    switch (score) {
+      case 1: return Colors.green;
+      case 2: return Colors.yellow.shade700;
+      case 3: return Colors.orange;
+      case 4: return Colors.red;
+      default: return Colors.grey;
+    }
+  }
 
+  Color _getEcoScoreColor(String? score) {
+    switch (score?.toLowerCase()) {
+      case 'a': return const Color(0xff038141);
+      case 'b': return const Color(0xff85bb2F);
+      case 'c': return const Color(0xfffecb02);
+      case 'd': return const Color(0xfffa8c00);
+      case 'e': return const Color(0xffe63e11);
+      default: return Colors.grey;
+    }
+  }
+
+  Widget _buildScoresRow(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          const Text(
-            'Pontuação Nutricional (Nutri-Score)',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.teal),
-          ),
-          const SizedBox(height: 24),
-          
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: isScoreAvailable ? [
-                BoxShadow(
-                  color: color.withAlpha(128),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ] : null,
-            ),
-            child: Text(
-              isScoreAvailable ? score.toUpperCase() : 'N/A',
-              style: const TextStyle(
-                fontSize: 48,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                shadows: [
-                  Shadow(
-                    blurRadius: 2.0,
-                    color: Colors.black26,
-                    offset: Offset(1.0, 1.0),
-                  ),
-                ]
-              ),
-            ),
-          ),
-            
-          const SizedBox(height: 24),
-          Text(
-            description,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 16, color: Colors.black54, height: 1.5),
-          ),
+          _buildScoreBadge('Nutri-Score', widget.product.nutritionGrades?.toUpperCase() ?? '?', _getNutriScoreColor(widget.product.nutritionGrades)),
+          _buildScoreBadge('Grupo NOVA', widget.product.novaGroup?.toString() ?? '?', _getNovaColor(widget.product.novaGroup)),
+          _buildScoreBadge('Eco-score', widget.product.ecoscoreGrade?.toUpperCase() ?? '?', _getEcoScoreColor(widget.product.ecoscoreGrade)),
         ],
+      ),
+    );
+  }
+
+  Widget _buildScoreBadge(String title, String score, Color color) {
+    return Expanded(
+      child: Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 4.0),
+          child: Column(
+            children: [
+              Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.teal), textAlign: TextAlign.center, maxLines: 1),
+              const SizedBox(height: 8),
+              Container(
+                width: 50,
+                height: 50,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  score,
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -295,11 +300,35 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
   // --- WIDGET PARA A ABA "INGREDIENTES" ---
   // (Removido o SingleChildScrollView interno)
   Widget _buildIngredientsTab(BuildContext context) {
+    final allergens = widget.product.allergensTags ?? [];
+
     return Padding( 
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (allergens.isNotEmpty) ...[
+            const Text(
+              'Alergênicos detectados',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.teal),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: allergens.map((tag) {
+                // As tags da API geralmente vêm como "en:gluten", removemos o prefixo.
+                final cleanTag = tag.replaceFirst(RegExp(r'^[a-z]{2}:'), '').toUpperCase();
+                return Chip(
+                  label: Text(cleanTag, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  backgroundColor: Colors.red,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  side: BorderSide.none,
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 24),
+          ],
           const Text(
             'Ingredientes',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.teal),

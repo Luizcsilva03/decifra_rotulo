@@ -19,6 +19,12 @@ class Product extends HiveObject {
   final String ingredientsText;
   @HiveField(6)
   final String? nutritionGrades;
+  @HiveField(7)
+  final int? novaGroup;
+  @HiveField(8)
+  final String? ecoscoreGrade;
+  @HiveField(9)
+  final List<String>? allergensTags;
 
   Product({
     required this.productName,
@@ -28,6 +34,9 @@ class Product extends HiveObject {
     required this.barcode,
     required this.ingredientsText,
     this.nutritionGrades,
+    this.novaGroup,
+    this.ecoscoreGrade,
+    this.allergensTags,
   });
 
   factory Product.fromJson(Map<String, dynamic> json) {
@@ -44,6 +53,9 @@ class Product extends HiveObject {
       barcode: json['code'],
       ingredientsText: productData?['ingredients_text_pt'] ?? productData?['ingredients_text'] ?? 'Ingredientes não informados.',
       nutritionGrades: productData?['nutrition_grades'] as String?,
+      novaGroup: productData?['nova_group'] as int?,
+      ecoscoreGrade: productData?['ecoscore_grade'] as String?,
+      allergensTags: (productData?['allergens_tags'] as List<dynamic>?)?.map((e) => e.toString()).toList(),
     );
   }
 }
