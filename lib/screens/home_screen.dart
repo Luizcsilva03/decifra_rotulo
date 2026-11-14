@@ -85,9 +85,11 @@ class _HomeContentState extends State<HomeContent> {
   );
 
   Future<void> _showScannerDialog() async {
+    bool hasScanned = false;
+
     final barcode = await showDialog<String>(
       context: context,
-      builder: (context) => Dialog(
+      builder: (dialogContext) => Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: SizedBox(
           width: 300,
@@ -100,10 +102,12 @@ class _HomeContentState extends State<HomeContent> {
                 MobileScanner(
                   controller: barcodeController,
                   onDetect: (capture) {
-                    final String? code = capture.barcodes.first.rawValue;
-                    if (code != null) {
+                    if (hasScanned) return;
+                    final String? code = capture.barcodes.firstOrNull?.rawValue;
+                    if (code != null && code.isNotEmpty) {
+                      hasScanned = true;
                       barcodeController.stop();
-                      Navigator.of(context).pop(code);
+                      Navigator.of(dialogContext).pop(code);
                     }
                   },
                 ),
@@ -120,6 +124,62 @@ class _HomeContentState extends State<HomeContent> {
                     width: 250,
                     height: 1,
                     color: Colors.red,
+                  ),
+                ),
+                Positioned(
+                  top: 12,
+                  left: 12,
+                  child: CircleAvatar(
+                    backgroundColor: Colors.black54,
+                    child: IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white),
+                      tooltip: 'Fechar scanner',
+                      onPressed: () {
+                        barcodeController.stop();
+                        Navigator.of(dialogContext).pop();
+                      },
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: ValueListenableBuilder<MobileScannerState>(
+                    valueListenable: barcodeController,
+                    builder: (context, state, child) {
+                      if (state.torchState == TorchState.unavailable) {
+                        return const SizedBox.shrink();
+                      }
+                      final torchOn = state.torchState == TorchState.on;
+                      return CircleAvatar(
+                        backgroundColor: Colors.black54,
+                        child: IconButton(
+                          icon: Icon(
+                            torchOn ? Icons.flash_on : Icons.flash_off,
+                            color: torchOn ? Colors.amber : Colors.white,
+                          ),
+                          tooltip: torchOn ? 'Desligar lanterna' : 'Ligar lanterna',
+                          onPressed: () => barcodeController.toggleTorch(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                Positioned(
+                  bottom: 16,
+                  left: 16,
+                  right: 16,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Text(
+                      'Aponte a câmera para o código de barras',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.white, fontSize: 12),
+                    ),
                   ),
                 ),
               ],
