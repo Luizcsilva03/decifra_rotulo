@@ -19,30 +19,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
-  }
-
-  Color _getNutriScoreColor(String? score) {
-    switch (score?.toLowerCase()) {
-      case 'a':
-        return const Color(0xff038141);
-      case 'b':
-        return const Color(0xff85bb2F);
-      case 'c':
-        return const Color(0xfffecb02);
-      case 'd':
-        return const Color(0xfffa8c00);
-      case 'e':
-        return const Color(0xffe63e11);
-      default:
-        return Colors.grey;
-    }
   }
 
   @override
@@ -108,7 +91,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
+            _buildScoresRow(context),
+            const SizedBox(height: 16),
             
             // --- ABAS ---
             Container(
@@ -122,7 +107,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
                 tabs: const [
                   Tab(icon: Icon(Icons.bar_chart_rounded), text: 'Nutricional'),
                   Tab(icon: Icon(Icons.format_list_bulleted_rounded), text: 'Ingredientes'),
-                  Tab(icon: Icon(Icons.shield_rounded), text: 'Nutri-Score'),
                 ],
               ),
             ),
@@ -134,7 +118,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
                 return [
                   _buildNutritionsTab(context),
                   _buildIngredientsTab(context),
-                  _buildScoreTab(context),
                 ][_tabController.index];
               },
             ),
@@ -144,62 +127,298 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
     );
   }
 
-  // --- WIDGET PARA A ABA "SCORE" ---
-  // (Removido o SingleChildScrollView interno)
-  Widget _buildScoreTab(BuildContext context) {
-    final score = widget.product.nutritionGrades;
-    final color = _getNutriScoreColor(score);
-    final bool isScoreAvailable = score != null && score.toLowerCase() != 'unknown';
-    final String description = isScoreAvailable 
-        ? 'Este produto tem uma classificação Nutri-Score ${score.toUpperCase()}.' 
-        : 'O Nutri-Score não está disponível para este produto.';
+  // --- MÉTODOS DE COR, INFO E UI PARA SCORES ---
+  static const List<_ScoreScaleItem> _nutriScoreScale = [
+    _ScoreScaleItem('A', Color(0xff038141), 'Qualidade nutricional muito boa'),
+    _ScoreScaleItem('B', Color(0xff85bb2F), 'Boa qualidade nutricional'),
+    _ScoreScaleItem('C', Color(0xfffecb02), 'Qualidade nutricional moderada'),
+    _ScoreScaleItem('D', Color(0xfffa8c00), 'Baixa qualidade nutricional'),
+    _ScoreScaleItem('E', Color(0xffe63e11), 'Qualidade nutricional muito baixa'),
+  ];
+
+  static final List<_ScoreScaleItem> _novaScale = [
+    const _ScoreScaleItem('1', Colors.green, 'In natura ou minimamente processado'),
+    _ScoreScaleItem('2', Colors.yellow.shade700, 'Ingrediente culinário processado'),
+    const _ScoreScaleItem('3', Colors.orange, 'Alimento processado'),
+    const _ScoreScaleItem('4', Colors.red, 'Alimento ultraprocessado'),
+  ];
+
+  static const List<_ScoreScaleItem> _ecoScoreScale = [
+    _ScoreScaleItem('A', Color(0xff038141), 'Impacto ambiental muito baixo'),
+    _ScoreScaleItem('B', Color(0xff85bb2F), 'Baixo impacto ambiental'),
+    _ScoreScaleItem('C', Color(0xfffecb02), 'Impacto ambiental moderado'),
+    _ScoreScaleItem('D', Color(0xfffa8c00), 'Alto impacto ambiental'),
+    _ScoreScaleItem('E', Color(0xffe63e11), 'Impacto ambiental muito alto'),
+  ];
+
+  _ScoreInfo _buildGradeScoreInfo({
+    required String title,
+    required String description,
+    required String? rawGrade,
+    required List<_ScoreScaleItem> scale,
+    required String unavailableText,
+  }) {
+    final normalized = rawGrade?.trim().toUpperCase();
+    final matched = scale.cast<_ScoreScaleItem?>().firstWhere(
+          (item) => item?.code == normalized,
+          orElse: () => null,
+        );
+
+    return _ScoreInfo(
+      title: title,
+      description: description,
+      currentItem: matched,
+      unavailableText: unavailableText,
+      scale: scale,
+    );
+  }
+
+  Widget _buildScoresRow(BuildContext context) {
+    final scores = [
+      _buildGradeScoreInfo(
+        title: 'Nutri-Score',
+        description:
+            'Classificação nutricional de A a E que avalia o equilíbrio entre nutrientes positivos (fibras, proteínas, frutas e vegetais) e pontos de atenção (calorias, açúcares, gorduras saturadas e sódio).',
+        rawGrade: widget.product.nutritionGrades,
+        scale: _nutriScoreScale,
+        unavailableText: 'A nota Nutri-Score ainda não está disponível para este produto.',
+      ),
+      _buildGradeScoreInfo(
+        title: 'Grupo NOVA',
+        description:
+            'Classificação que indica o grau de processamento industrial do alimento, indo de 1 (in natura ou minimamente processado) até 4 (ultraprocessado).',
+        rawGrade: widget.product.novaGroup?.toString(),
+        scale: _novaScale,
+        unavailableText: 'O grau de processamento (NOVA) ainda não foi informado para este produto.',
+      ),
+      _buildGradeScoreInfo(
+        title: 'Eco-score',
+        description:
+            'Nota ambiental de A a E que estima o impacto ecológico do produto, considerando produção agrícola, embalagem, transporte e reciclabilidade.',
+        rawGrade: widget.product.ecoscoreGrade,
+        scale: _ecoScoreScale,
+        unavailableText: 'A avaliação ambiental (Eco-score) ainda não está disponível para este produto.',
+      ),
+    ];
 
     return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          const Text(
-            'Pontuação Nutricional (Nutri-Score)',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.teal),
-          ),
-          const SizedBox(height: 24),
-          
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: isScoreAvailable ? [
-                BoxShadow(
-                  color: color.withAlpha(128),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Row(
+        children: scores
+            .map((info) => _buildScoreBadge(context, info))
+            .toList(),
+      ),
+    );
+  }
+
+  Widget _buildScoreBadge(BuildContext context, _ScoreInfo info) {
+    final current = info.currentItem;
+
+    return Expanded(
+      child: Card(
+        elevation: 2,
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: InkWell(
+          onTap: () => _showScoreInfoDialog(context, info),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 6.0),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        info.title,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.teal,
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 3),
+                    Icon(
+                      Icons.info_outline_rounded,
+                      size: 13,
+                      color: Colors.teal.shade400,
+                    ),
+                  ],
                 ),
-              ] : null,
-            ),
-            child: Text(
-              isScoreAvailable ? score.toUpperCase() : 'N/A',
-              style: const TextStyle(
-                fontSize: 48,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                shadows: [
-                  Shadow(
-                    blurRadius: 2.0,
-                    color: Colors.black26,
-                    offset: Offset(1.0, 1.0),
+                const SizedBox(height: 8),
+                if (current != null)
+                  Container(
+                    width: 50,
+                    height: 50,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: current.color,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      current.code,
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        shadows: [Shadow(color: Colors.black26, blurRadius: 2)],
+                      ),
+                    ),
+                  )
+                else
+                  Container(
+                    width: 50,
+                    height: 50,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: Text(
+                      'N/D',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
                   ),
-                ]
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showScoreInfoDialog(BuildContext context, _ScoreInfo info) {
+    final current = info.currentItem;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: current?.color ?? Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(8),
+                border: current == null ? Border.all(color: Colors.grey.shade300) : null,
+              ),
+              child: Text(
+                current?.code ?? 'N/D',
+                style: TextStyle(
+                  fontSize: current != null ? 18 : 11,
+                  fontWeight: FontWeight.bold,
+                  color: current != null ? Colors.white : Colors.grey.shade600,
+                ),
               ),
             ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                info.title,
+                style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.teal),
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: current != null ? current.color.withAlpha(28) : Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: current != null ? current.color.withAlpha(90) : Colors.grey.shade300,
+                  ),
+                ),
+                child: Text(
+                  current != null
+                      ? '${current.code} — ${current.label}'
+                      : info.unavailableText,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: current != null ? Colors.black87 : Colors.grey.shade700,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'O que significa?',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.teal),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                info.description,
+                style: const TextStyle(fontSize: 14, height: 1.4, color: Colors.black87),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Escala de referência',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.teal),
+              ),
+              const SizedBox(height: 8),
+              ...info.scale.map((item) {
+                final isSelected = current?.code == item.code;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 6.0),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 24,
+                        height: 24,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: item.color,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          item.code,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          item.label,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            color: isSelected ? Colors.black : Colors.black87,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ],
           ),
-            
-          const SizedBox(height: 24),
-          Text(
-            description,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 16, color: Colors.black54, height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Entendi'),
           ),
         ],
       ),
@@ -292,14 +511,133 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
     );
   }
 
+  static const Map<String, String> _allergenTranslations = {
+    'gluten': 'GLÚTEN',
+    'milk': 'LEITE',
+    'dairy': 'LATICÍNIOS',
+    'lactose': 'LACTOSE',
+    'whey': 'SORO DE LEITE',
+    'casein': 'CASEÍNA',
+    'eggs': 'OVOS',
+    'egg': 'OVOS',
+    'soybeans': 'SOJA',
+    'soy': 'SOJA',
+    'soya': 'SOJA',
+    'peanuts': 'AMENDOIM',
+    'peanut': 'AMENDOIM',
+    'nuts': 'CASTANHAS E NOZES',
+    'tree-nuts': 'CASTANHAS E NOZES',
+    'almonds': 'AMÊNDOAS',
+    'hazelnuts': 'AVELÃS',
+    'walnuts': 'NOZES',
+    'cashews': 'CASTANHA-DE-CAJU',
+    'cashew-nuts': 'CASTANHA-DE-CAJU',
+    'pecan-nuts': 'NOZ-PECÃ',
+    'pecans': 'NOZ-PECÃ',
+    'brazil-nuts': 'CASTANHA-DO-PARÁ',
+    'pistachios': 'PISTACHES',
+    'macadamia-nuts': 'MACADÂMIA',
+    'pine-nuts': 'PINHÃO',
+    'chestnuts': 'CASTANHA PORTUGUESA',
+    'wheat': 'TRIGO',
+    'barley': 'CEVADA',
+    'rye': 'CENTEIO',
+    'oats': 'AVEIA',
+    'spelt': 'ESPELTA',
+    'fish': 'PEIXE',
+    'crustaceans': 'CRUSTÁCEOS',
+    'shrimp': 'CAMARÃO',
+    'prawns': 'CAMARÃO',
+    'crab': 'CARANGUEJO',
+    'lobster': 'LAGOSTA',
+    'molluscs': 'MOLUSCOS',
+    'mollusks': 'MOLUSCOS',
+    'squid': 'LULA',
+    'octopus': 'POLVO',
+    'sesame-seeds': 'GERGELIM',
+    'sesame': 'GERGELIM',
+    'mustard': 'MOSTARDA',
+    'celery': 'AIPO',
+    'lupin': 'TREMOÇO',
+    'sulphur-dioxide-and-sulphites': 'SULFITOS',
+    'sulfur-dioxide-and-sulfites': 'SULFITOS',
+    'sulphites': 'SULFITOS',
+    'sulfites': 'SULFITOS',
+    'latex': 'LÁTEX',
+    'corn': 'MILHO',
+    'maize': 'MILHO',
+    'coconut': 'COCO',
+    'cocoa': 'CACAU',
+    'gelatin': 'GELATINA',
+    'honey': 'MEL',
+    'yeast': 'LEVEDURA',
+    'garlic': 'ALHO',
+    'onion': 'CEBOLA',
+    'tomato': 'TOMATE',
+    'apple': 'MAÇÃ',
+    'banana': 'BANANA',
+    'kiwi': 'KIWI',
+    'peach': 'PÊSSEGO',
+    'strawberry': 'MORANGO',
+    'salmon': 'SALMÃO',
+    'tuna': 'ATUM',
+    'cod': 'BACALHAU',
+    'phenylalanine': 'FENILALANINA',
+    'tartrazine': 'TARTRAZINA',
+    'carmine': 'CARMIM',
+  };
+
+  static const Set<String> _ignoredAllergenTags = {
+    '',
+    'none',
+    'unknown',
+    'nenhum',
+  };
+
+  String? _translateAllergenTag(String tag) {
+    final normalized = tag
+        .trim()
+        .toLowerCase()
+        .replaceFirst(RegExp(r'^[a-z]{2,3}:'), '');
+    if (_ignoredAllergenTags.contains(normalized)) return null;
+    return _allergenTranslations[normalized] ??
+        normalized.replaceAll(RegExp(r'[-_]+'), ' ').toUpperCase();
+  }
+
   // --- WIDGET PARA A ABA "INGREDIENTES" ---
   // (Removido o SingleChildScrollView interno)
   Widget _buildIngredientsTab(BuildContext context) {
-    return Padding( 
+    final allergens = (widget.product.allergensTags ?? [])
+        .map(_translateAllergenTag)
+        .whereType<String>()
+        .toSet()
+        .toList();
+
+    return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (allergens.isNotEmpty) ...[
+            const Text(
+              'Alergênicos detectados',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.teal),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: allergens.map((label) {
+                return Chip(
+                  label: Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  backgroundColor: Colors.red,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  side: BorderSide.none,
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 24),
+          ],
           const Text(
             'Ingredientes',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.teal),
@@ -351,4 +689,30 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
       ),
     );
   }
+}
+
+/// Representa um nível individual na escala de um índice (ex.: A..E ou 1..4).
+class _ScoreScaleItem {
+  final String code;
+  final Color color;
+  final String label;
+
+  const _ScoreScaleItem(this.code, this.color, this.label);
+}
+
+/// Agrupa os metadados exibidos no card e no diálogo explicativo de um índice.
+class _ScoreInfo {
+  final String title;
+  final String description;
+  final _ScoreScaleItem? currentItem;
+  final String unavailableText;
+  final List<_ScoreScaleItem> scale;
+
+  const _ScoreInfo({
+    required this.title,
+    required this.description,
+    required this.currentItem,
+    required this.unavailableText,
+    required this.scale,
+  });
 }

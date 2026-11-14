@@ -20,7 +20,10 @@ class OpenFoodFactsService {
       'nutriments,'
       'ingredients_text_pt,'
       'ingredients_text,'
-      'nutrition_grades';
+      'nutrition_grades,'
+      'nova_group,'
+      'ecoscore_grade,'
+      'allergens_tags';
       
   Future<Product> getProduct(String barcode) async {
     try {

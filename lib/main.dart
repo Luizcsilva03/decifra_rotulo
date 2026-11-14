@@ -5,6 +5,7 @@ import 'package:decifra_rotulo/models/product_model.dart';
 import 'package:decifra_rotulo/screens/auth_wrapper.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart'; // Garanta que este import está aqui
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:decifra_rotulo/services/ad_service.dart';
@@ -12,6 +13,9 @@ import 'package:decifra_rotulo/services/notification_service.dart'; // <-- 1. Im
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+  ]);
   
   // --- INÍCIO DA MUDANÇA ---
   // Inicializa o Firebase
