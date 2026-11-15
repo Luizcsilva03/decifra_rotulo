@@ -30,8 +30,8 @@ class AdService {
 
   // Função privada para gerar o próximo alvo
   int _generateNextAdTarget() {
-    // nextInt(5) gera um número de 0 a 4. Somamos 1 para ter um número de 1 a 5.
-    return _random.nextInt(5) + 1;
+    // Garante pelo menos 3 scans antes do intersticial (3 a 5 scans).
+    return _random.nextInt(3) + 3;
   }
 
   /// Função pública para incrementar o contador e decidir se mostra o anúncio.

@@ -9,7 +9,7 @@ import 'package:http/http.dart' as http;
 
 class OpenFoodFactsService {
   static const String _baseUrl = 'https://world.openfoodfacts.org/api/v2/product/';
-  static const String _userAgent = 'Decifra Rotulo - Android/iOS - Version 1.0.0 - https://github.com/Luizcsilva03/decifra_rotulo';
+  static const String _userAgent = 'Decifra Rotulo - Android/iOS - Version 1.0.9 - https://github.com/Luizcsilva03/decifra_rotulo';
 
   static const String _fieldsToFetch = 
       'code,'
@@ -18,18 +18,24 @@ class OpenFoodFactsService {
       'brands,'
       'image_url,'
       'nutriments,'
+      'nutrition_data_per,'
       'ingredients_text_pt,'
       'ingredients_text,'
       'nutrition_grades,'
       'nova_group,'
       'ecoscore_grade,'
       'allergens_tags';
+
+  final http.Client _client;
+
+  OpenFoodFactsService({http.Client? client}) : _client = client ?? http.Client();
       
   Future<Product> getProduct(String barcode) async {
     try {
-      final uri = Uri.parse('$_baseUrl$barcode?fields=$_fieldsToFetch');
+      final cleanBarcode = Uri.encodeComponent(barcode.trim());
+      final uri = Uri.parse('$_baseUrl$cleanBarcode?fields=$_fieldsToFetch');
       
-      final response = await http.get(
+      final response = await _client.get(
         uri,
         headers: { 'User-Agent': _userAgent },
       ).timeout(const Duration(seconds: 10));
@@ -44,6 +50,9 @@ class OpenFoodFactsService {
       // 2. A API diz que a rede está OK (200)
       else if (response.statusCode == 200) {
         final jsonResponse = json.decode(response.body);
+        if (jsonResponse is! Map<String, dynamic>) {
+          throw NetworkException();
+        }
 
         // 3. A API diz que o produto existe (status:1) mas não tem dados (status:0)
         if (jsonResponse['status'] == 0 || jsonResponse['product'] == null) {
@@ -53,7 +62,7 @@ class OpenFoodFactsService {
         final product = Product.fromJson(jsonResponse);
 
         // 4. O produto veio vazio
-        if (product.productName == 'Nome não disponível') {
+        if (product.productName.trim().isEmpty || product.productName == 'Nome não disponível') {
           throw ProductNotFoundException();
         }
 
@@ -66,25 +75,22 @@ class OpenFoodFactsService {
       }
 
     } 
-    // 6. Erros de rede (offline, timeout)
+    // 6. Erros de rede (offline, timeout, cliente HTTP)
     on SocketException {
       throw NetworkException();
     } on TimeoutException {
       throw NetworkException();
+    } on http.ClientException {
+      throw NetworkException();
+    } on FormatException {
+      throw NetworkException();
     } 
-    // 7. Erros de parsing de JSON ou outros erros inesperados
+    // 7. Repassa exceções conhecidas e evita mascarar erros de comunicação/parsing como produto não encontrado
     catch (e) {
-      // Se o erro já é um dos nossos, só repassa.
-      if (e is ProductNotFoundException) {
+      if (e is ProductNotFoundException || e is NetworkException) {
         rethrow;
       }
-      if (e is NetworkException) {
-        rethrow;
-      }
-
-      // Se for um erro desconhecido (ex: falha no json.decode),
-      // o mais provável é que os dados do produto não vieram.
-      throw ProductNotFoundException();
+      throw NetworkException();
     }
   }
 }

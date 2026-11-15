@@ -37,19 +37,21 @@ android {
 
     // --- CONFIGURAÇÃO DE ASSINATURA ---
     signingConfigs {
-        create("release") {
-            keyAlias = keyProperties["keyAlias"] as String?
-            keyPassword = keyProperties["keyPassword"] as String?
-            storeFile = keyProperties["storeFile"]?.let { rootProject.file(it) }
-            storePassword = keyProperties["storePassword"] as String?
+        if (keyPropertiesFile.exists()) {
+            create("release") {
+                keyAlias = keyProperties["keyAlias"] as String?
+                keyPassword = keyProperties["keyPassword"] as String?
+                storeFile = keyProperties["storeFile"]?.let { rootProject.file(it) }
+                storePassword = keyProperties["storePassword"] as String?
+            }
         }
     }
-    // --- FIM DA CONFIGURAÇÃO DE ASSINATURA ---
+    // --- FIM DA LÓGICA DE ASSINATURA ---
 
     defaultConfig {
         applicationId = "com.luizcsilva.decifrarotulo"
         // AJUSTE 1: Fixar minSdk em 23 para evitar problemas com notificações
-        minSdk = flutter.minSdkVersion 
+        minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -65,9 +67,11 @@ android {
         getByName("debug") {
             signingConfig = signingConfigs.getByName("debug")
         }
-        // Bloco release modificado para usar a chave de produção
+        // Bloco release modificado para usar a chave de produção quando key.properties existir
         getByName("release") {
-            signingConfig = signingConfigs.getByName("release")
+            if (keyPropertiesFile.exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
     

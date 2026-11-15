@@ -4,8 +4,10 @@ import 'package:decifra_rotulo/firebase_options.dart';
 import 'package:decifra_rotulo/models/product_model.dart';
 import 'package:decifra_rotulo/screens/auth_wrapper.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart'; // Garanta que este import está aqui
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:decifra_rotulo/services/ad_service.dart';
@@ -23,19 +25,16 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
- // --- MUDANÇA AQUI ---
-  // Configura os dispositivos de teste
-  RequestConfiguration configuration = RequestConfiguration(
-    testDeviceIds: ["15BBDF3DDFA34C371E7D2BDFB495FA14"],
-  );
-  MobileAds.instance.updateRequestConfiguration(configuration);
-  
-  // Inicializa o AdMob e pré-carrega os anúncios
+  if (kDebugMode) {
+    final configuration = RequestConfiguration(
+      testDeviceIds: ["15BBDF3DDFA34C371E7D2BDFB495FA14"],
+    );
+    MobileAds.instance.updateRequestConfiguration(configuration);
+  }
+
+  // Inicializa o AdMob e pré-carrega o anúncio intersticial
   await MobileAds.instance.initialize();
-  final adService = AdService();
-  adService.loadBannerAd();
-  adService.loadInterstitialAd();
-  // --- FIM DA MUDANÇA ---
+  AdService().loadInterstitialAd();
 
   // --- 2. INICIALIZA O SERVIÇO DE NOTIFICAÇÃO ---
   await NotificationService().initNotifications();
@@ -54,8 +53,16 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Decifra Rótulo',
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      supportedLocales: const [Locale('pt', 'BR')],
+      locale: const Locale('pt', 'BR'),
       theme: ThemeData(
-        primarySwatch: Colors.teal,
+        useMaterial3: false,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.teal.shade700,
+          primary: Colors.teal.shade700,
+        ),
+        primaryColor: Colors.teal.shade700,
         visualDensity: VisualDensity.adaptivePlatformDensity,
         fontFamily: 'Roboto',
       ),
