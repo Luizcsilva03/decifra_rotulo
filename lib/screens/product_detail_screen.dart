@@ -432,11 +432,15 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
     );
   }
   
+  double? _scaleFromGrams(double? grams, double factor) =>
+      grams != null ? grams * factor : null;
+
   // --- MUDANÇA PRINCIPAL AQUI: A TAB NUTRICIONAL AGORA É 100% DINÂMICA ---
   Widget _buildNutritionsTab(BuildContext context) {
     final nutriments = widget.product.nutriments;
-    
-    // 1. Criamos a lista "mestra" de todos os nutrientes que queremos mostrar
+
+    // A API Open Food Facts padroniza *_100g e *_serving em gramas (g) para sais,
+    // vitaminas e minerais; convertemos para mg (* 1000) ou µg (* 1000000) na exibição.
     final List<Map<String, dynamic>> nutrientList = [
       {'label': 'Calorias', 'value': nutriments.energyKcal, 'unit': 'kcal'},
       {'label': 'Gorduras', 'value': nutriments.fat, 'unit': 'g'},
@@ -447,16 +451,16 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
       {'label': 'Fibras', 'value': nutriments.fiber, 'unit': 'g'},
       {'label': 'Proteínas', 'value': nutriments.proteins, 'unit': 'g'},
       {'label': 'Sal', 'value': nutriments.salt, 'unit': 'g'},
-      {'label': 'Sódio', 'value': nutriments.sodium != null ? nutriments.sodium! * 1000 : null, 'unit': 'mg', 'allowSubMg': false},
-      {'label': 'Vitamina A', 'value': nutriments.vitaminA, 'unit': 'µg'},
-      {'label': 'Vitamina C', 'value': nutriments.vitaminC, 'unit': 'mg'},
-      {'label': 'Vitamina D', 'value': nutriments.vitaminD, 'unit': 'µg'},
-      {'label': 'Vitamina B1', 'value': nutriments.vitaminB1, 'unit': 'mg'},
-      {'label': 'Vitamina B6', 'value': nutriments.vitaminB6, 'unit': 'mg'},
-      {'label': 'Vitamina B12', 'value': nutriments.vitaminB12, 'unit': 'µg'},
-      {'label': 'Cálcio', 'value': nutriments.calcium, 'unit': 'mg'},
-      {'label': 'Ferro', 'value': nutriments.iron, 'unit': 'mg'},
-      {'label': 'Magnésio', 'value': nutriments.magnesium, 'unit': 'mg'},
+      {'label': 'Sódio', 'value': _scaleFromGrams(nutriments.sodium, 1000), 'unit': 'mg'},
+      {'label': 'Vitamina A', 'value': _scaleFromGrams(nutriments.vitaminA, 1000000), 'unit': 'µg'},
+      {'label': 'Vitamina C', 'value': _scaleFromGrams(nutriments.vitaminC, 1000), 'unit': 'mg'},
+      {'label': 'Vitamina D', 'value': _scaleFromGrams(nutriments.vitaminD, 1000000), 'unit': 'µg'},
+      {'label': 'Vitamina B1', 'value': _scaleFromGrams(nutriments.vitaminB1, 1000), 'unit': 'mg'},
+      {'label': 'Vitamina B6', 'value': _scaleFromGrams(nutriments.vitaminB6, 1000), 'unit': 'mg'},
+      {'label': 'Vitamina B12', 'value': _scaleFromGrams(nutriments.vitaminB12, 1000000), 'unit': 'µg'},
+      {'label': 'Cálcio', 'value': _scaleFromGrams(nutriments.calcium, 1000), 'unit': 'mg'},
+      {'label': 'Ferro', 'value': _scaleFromGrams(nutriments.iron, 1000), 'unit': 'mg'},
+      {'label': 'Magnésio', 'value': _scaleFromGrams(nutriments.magnesium, 1000), 'unit': 'mg'},
     ];
 
     // 2. Filtra a lista para incluir apenas os nutrientes que TÊM valor
@@ -468,8 +472,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
             nutrient['label'],
             nutrient['value'],
             nutrient['unit'],
-            allowSubMg: nutrient['allowSubMg'] as bool? ?? true,
-          )
+          ),
         );
         nutrientRows.add(const Divider(height: 20));
       }
@@ -667,24 +670,16 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
   Widget _buildNutrimentRow(
     String label,
     dynamic value,
-    String unit, {
-    bool allowSubMg = true,
-  }) {
+    String unit,
+  ) {
     String displayValue = 'N/D';
     if (value != null) {
-      // O 'value' pode ser double, int ou String. Convertemos tudo para String.
-      // E usamos 'double.tryParse' para formatar números corretamente.
-      final double? numericValue = double.tryParse(value.toString());
+      final double? numericValue = double.tryParse(
+        value.toString().trim().replaceAll(',', '.'),
+      );
 
       if (numericValue != null) {
-        // Lógica especial para vitaminas/minerais que vêm em valores muito pequenos
-        if (allowSubMg && unit == 'mg' && numericValue < 1) {
-          displayValue = '${(numericValue * 1000).toStringAsFixed(2)} µg'; // Converte mg para µg
-        } else if (unit == 'µg' && numericValue < 0.01) {
-          displayValue = '${(numericValue * 1000).toStringAsFixed(2)} ng'; // Converte µg para ng
-        } else {
-          displayValue = '${numericValue.toStringAsFixed(2)} $unit';
-        }
+        displayValue = '${numericValue.toStringAsFixed(2)} $unit';
       } else if (value is String && value.isNotEmpty) {
         displayValue = '$value $unit';
       }

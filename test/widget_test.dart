@@ -46,12 +46,18 @@ Product _sampleProduct({
       saturatedFat: 9,
       fiber: 2.5,
       sodium: 0.25,
+      vitaminA: 0.00076,
+      vitaminC: 0.095,
+      vitaminD: 0.00003,
+      calcium: 0.12,
+      iron: 0.0135,
+      magnesium: 0.24,
     ),
   );
 }
 
 void main() {
-  testWidgets('ProductDetailScreen renders scores, sodium in mg, PT-BR allergens, and info dialog',
+  testWidgets('ProductDetailScreen renders scores, nutrient units, PT-BR allergens, and info dialog',
       (WidgetTester tester) async {
     final handle = tester.ensureSemantics();
 
@@ -71,9 +77,15 @@ void main() {
     expect(find.text('4'), findsOneWidget);
     expect(find.text('B'), findsOneWidget);
 
-    // Sódio convertido de g para mg (0.25 g * 1000 = 250.00 mg)
+    // Conversão de gramas da API Open Food Facts para mg e µg sem rebaixar para ng/µg indevido
     expect(find.text('Sódio'), findsOneWidget);
     expect(find.text('250.00 mg'), findsOneWidget);
+    expect(find.text('760.00 µg'), findsOneWidget); // Vitamina A (0.00076 g)
+    expect(find.text('95.00 mg'), findsOneWidget);  // Vitamina C (0.095 g)
+    expect(find.text('30.00 µg'), findsOneWidget);  // Vitamina D (0.00003 g)
+    expect(find.text('120.00 mg'), findsOneWidget); // Cálcio (0.12 g)
+    expect(find.text('13.50 mg'), findsOneWidget);  // Ferro (0.0135 g)
+    expect(find.text('240.00 mg'), findsOneWidget); // Magnésio (0.24 g)
 
     // Verifica diálogo explicativo ao tocar em um índice
     await tester.tap(find.text('Nutri-Score'));
