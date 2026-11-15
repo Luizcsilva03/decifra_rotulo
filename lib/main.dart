@@ -32,8 +32,9 @@ Future<void> main() async {
     MobileAds.instance.updateRequestConfiguration(configuration);
   }
 
-  // Inicializa o AdMob e pré-carrega o anúncio intersticial
+  // Inicializa o AdMob, restaura estado do contador/cooldown e pré-carrega o intersticial
   await MobileAds.instance.initialize();
+  await AdService().init();
   AdService().loadInterstitialAd();
 
   // --- 2. INICIALIZA O SERVIÇO DE NOTIFICAÇÃO ---
