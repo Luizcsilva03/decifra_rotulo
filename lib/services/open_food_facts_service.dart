@@ -9,7 +9,7 @@ import 'package:http/http.dart' as http;
 
 class OpenFoodFactsService {
   static const String _baseUrl = 'https://world.openfoodfacts.org/api/v2/product/';
-  static const String _userAgent = 'Decifra Rotulo - Android/iOS - Version 1.0.9 - https://github.com/Luizcsilva03/decifra_rotulo';
+  static const String _userAgent = 'Decifra Rotulo - Android/iOS - Version 1.1.0 - https://github.com/Luizcsilva03/decifra_rotulo';
 
   static const String _fieldsToFetch = 
       'code,'
