@@ -92,7 +92,7 @@ class AuthService {
       final user = userCredential.user;
 
       if (user != null) {
-        if (userCredential.additionalUserInfo!.isNewUser) {
+        if (userCredential.additionalUserInfo?.isNewUser ?? false) {
           await _firestore.collection('users').doc(user.uid).set({
             'name': user.displayName,
             'email': user.email,
@@ -136,18 +136,30 @@ class AuthService {
   Future<void> signOut() async {
     final user = _auth.currentUser;
     if (user != null) {
-      // Boa prática: podemos remover o token do usuário ao sair
-      // para ele não receber notificações quando não está logado.
-      await _firestore.collection('users').doc(user.uid).set(
-        { 'fcmToken': null },
-        SetOptions(merge: true),
-      );
-      
-      final userHistoryBox = await Hive.openBox<Product>('history_${user.uid}');
-      await userHistoryBox.close();
+      // Tenta limpar o token FCM no Firestore sem bloquear o logout se estiver offline.
+      try {
+        await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .set(
+              { 'fcmToken': null },
+              SetOptions(merge: true),
+            )
+            .timeout(const Duration(seconds: 3));
+      } catch (_) {}
+
+      final boxName = 'history_${user.uid}';
+      if (Hive.isBoxOpen(boxName)) {
+        try {
+          await Hive.box<Product>(boxName).close();
+        } catch (_) {}
+      }
     }
 
-    await _googleSignIn.signOut();
+    try {
+      await _googleSignIn.signOut();
+    } catch (_) {}
+
     await _auth.signOut();
   }
 }

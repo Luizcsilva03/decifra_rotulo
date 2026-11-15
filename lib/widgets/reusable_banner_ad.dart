@@ -1,7 +1,10 @@
 // lib/widgets/reusable_banner_ad.dart
 
+import 'dart:async';
+
 import 'package:decifra_rotulo/services/ad_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 // Agora é um StatefulWidget para gerenciar seu próprio estado
@@ -26,22 +29,51 @@ class _ReusableBannerAdState extends State<ReusableBannerAd> {
       size: AdSize.banner,
       listener: BannerAdListener(
         onAdLoaded: (ad) {
+          if (!mounted) {
+            ad.dispose();
+            _bannerAd = null;
+            return;
+          }
           setState(() {
             _isAdLoaded = true;
           });
         },
         onAdFailedToLoad: (ad, err) {
           ad.dispose();
+          _bannerAd = null;
         },
       ),
     );
 
-    _bannerAd?.load();
+    try {
+      final loadFuture = _bannerAd?.load();
+      if (loadFuture != null) {
+        unawaited(
+          loadFuture.catchError((Object error) {
+            _bannerAd?.dispose().catchError((_) {});
+            _bannerAd = null;
+          }),
+        );
+      }
+    } on MissingPluginException {
+      _bannerAd = null;
+    } on PlatformException {
+      _bannerAd = null;
+    }
   }
 
   @override
   void dispose() {
-    _bannerAd?.dispose();
+    try {
+      final disposeFuture = _bannerAd?.dispose();
+      if (disposeFuture != null) {
+        unawaited(disposeFuture.catchError((_) {}));
+      }
+    } on MissingPluginException {
+      // Ignora em ambientes sem canal nativo de anúncios (ex.: testes de widget).
+    } on PlatformException {
+      // Ignora em ambientes sem canal nativo de anúncios.
+    }
     super.dispose();
   }
 

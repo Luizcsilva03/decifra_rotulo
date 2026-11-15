@@ -35,7 +35,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black54),
+        iconTheme: const IconThemeData(color: Colors.black87),
       ),
       bottomNavigationBar: const ReusableBannerAd(),
       
@@ -64,9 +64,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
                         );
                       },
                       errorBuilder: (context, error, stackTrace) {
-                        return const Icon(Icons.fastfood, size: 150, color: Colors.grey);
+                        return Icon(Icons.fastfood, size: 150, color: Colors.grey.shade600);
                       },
-                    ),
+                    )
+                  else
+                    Icon(Icons.fastfood, size: 120, color: Colors.grey.shade600),
                   const SizedBox(height: 16),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -79,13 +81,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
                   const SizedBox(height: 8),
                   Text(
                     widget.product.brands,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.grey[600]),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.grey.shade700),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Cód. Barras: ${widget.product.barcode}',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade700),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -97,11 +99,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
             
             // --- ABAS ---
             Container(
-              color: Colors.teal,
+              color: Colors.teal.shade800,
               child: TabBar(
                 controller: _tabController,
                 labelColor: Colors.white,
-                unselectedLabelColor: Colors.teal.shade200,
+                unselectedLabelColor: const Color(0xFFE0F2F1),
                 indicatorColor: Colors.white,
                 indicatorWeight: 3.0,
                 tabs: const [
@@ -129,26 +131,26 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
 
   // --- MÉTODOS DE COR, INFO E UI PARA SCORES ---
   static const List<_ScoreScaleItem> _nutriScoreScale = [
-    _ScoreScaleItem('A', Color(0xff038141), 'Qualidade nutricional muito boa'),
-    _ScoreScaleItem('B', Color(0xff85bb2F), 'Boa qualidade nutricional'),
-    _ScoreScaleItem('C', Color(0xfffecb02), 'Qualidade nutricional moderada'),
-    _ScoreScaleItem('D', Color(0xfffa8c00), 'Baixa qualidade nutricional'),
-    _ScoreScaleItem('E', Color(0xffe63e11), 'Qualidade nutricional muito baixa'),
+    _ScoreScaleItem('A', Color(0xff038141), Colors.white, 'Qualidade nutricional muito boa'),
+    _ScoreScaleItem('B', Color(0xff85bb2F), Color(0xFF1A1A1A), 'Boa qualidade nutricional'),
+    _ScoreScaleItem('C', Color(0xfffecb02), Color(0xFF1A1A1A), 'Qualidade nutricional moderada'),
+    _ScoreScaleItem('D', Color(0xfffa8c00), Color(0xFF1A1A1A), 'Baixa qualidade nutricional'),
+    _ScoreScaleItem('E', Color(0xFFC62828), Colors.white, 'Qualidade nutricional muito baixa'),
   ];
 
   static final List<_ScoreScaleItem> _novaScale = [
-    const _ScoreScaleItem('1', Colors.green, 'In natura ou minimamente processado'),
-    _ScoreScaleItem('2', Colors.yellow.shade700, 'Ingrediente culinário processado'),
-    const _ScoreScaleItem('3', Colors.orange, 'Alimento processado'),
-    const _ScoreScaleItem('4', Colors.red, 'Alimento ultraprocessado'),
+    const _ScoreScaleItem('1', Color(0xff038141), Colors.white, 'In natura ou minimamente processado'),
+    _ScoreScaleItem('2', Colors.yellow.shade700, const Color(0xFF1A1A1A), 'Ingrediente culinário processado'),
+    const _ScoreScaleItem('3', Colors.orange, Color(0xFF1A1A1A), 'Alimento processado'),
+    const _ScoreScaleItem('4', Color(0xFFC62828), Colors.white, 'Alimento ultraprocessado'),
   ];
 
   static const List<_ScoreScaleItem> _ecoScoreScale = [
-    _ScoreScaleItem('A', Color(0xff038141), 'Impacto ambiental muito baixo'),
-    _ScoreScaleItem('B', Color(0xff85bb2F), 'Baixo impacto ambiental'),
-    _ScoreScaleItem('C', Color(0xfffecb02), 'Impacto ambiental moderado'),
-    _ScoreScaleItem('D', Color(0xfffa8c00), 'Alto impacto ambiental'),
-    _ScoreScaleItem('E', Color(0xffe63e11), 'Impacto ambiental muito alto'),
+    _ScoreScaleItem('A', Color(0xff038141), Colors.white, 'Impacto ambiental muito baixo'),
+    _ScoreScaleItem('B', Color(0xff85bb2F), Color(0xFF1A1A1A), 'Baixo impacto ambiental'),
+    _ScoreScaleItem('C', Color(0xfffecb02), Color(0xFF1A1A1A), 'Impacto ambiental moderado'),
+    _ScoreScaleItem('D', Color(0xfffa8c00), Color(0xFF1A1A1A), 'Alto impacto ambiental'),
+    _ScoreScaleItem('E', Color(0xFFC62828), Colors.white, 'Impacto ambiental muito alto'),
   ];
 
   _ScoreInfo _buildGradeScoreInfo({
@@ -215,80 +217,85 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
     final current = info.currentItem;
 
     return Expanded(
-      child: Card(
-        elevation: 2,
-        clipBehavior: Clip.antiAlias,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: InkWell(
-          onTap: () => _showScoreInfoDialog(context, info),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 6.0),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Flexible(
-                      child: Text(
-                        info.title,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.teal,
+      child: Semantics(
+        button: true,
+        label: current != null
+            ? '${info.title}: nota ${current.code}, ${current.label}. Toque para ver detalhes'
+            : '${info.title}: não disponível. Toque para ver detalhes',
+        child: Card(
+          elevation: 2,
+          clipBehavior: Clip.antiAlias,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: InkWell(
+            onTap: () => _showScoreInfoDialog(context, info),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 6.0),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          info.title,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.teal.shade800,
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                    const SizedBox(width: 3),
-                    Icon(
-                      Icons.info_outline_rounded,
-                      size: 13,
-                      color: Colors.teal.shade400,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                if (current != null)
-                  Container(
-                    width: 50,
-                    height: 50,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: current.color,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      current.code,
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        shadows: [Shadow(color: Colors.black26, blurRadius: 2)],
+                      const SizedBox(width: 3),
+                      Icon(
+                        Icons.info_outline_rounded,
+                        size: 14,
+                        color: Colors.teal.shade700,
                       ),
-                    ),
-                  )
-                else
-                  Container(
-                    width: 50,
-                    height: 50,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Colors.grey.shade300),
-                    ),
-                    child: Text(
-                      'N/D',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
+                    ],
                   ),
-              ],
+                  const SizedBox(height: 8),
+                  if (current != null)
+                    Container(
+                      width: 50,
+                      height: 50,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: current.color,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        current.code,
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: current.textColor,
+                        ),
+                      ),
+                    )
+                  else
+                    Container(
+                      width: 50,
+                      height: 50,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.grey.shade400),
+                      ),
+                      child: Text(
+                        'N/D',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
         ),
@@ -312,14 +319,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
               decoration: BoxDecoration(
                 color: current?.color ?? Colors.grey.shade100,
                 borderRadius: BorderRadius.circular(8),
-                border: current == null ? Border.all(color: Colors.grey.shade300) : null,
+                border: current == null ? Border.all(color: Colors.grey.shade400) : null,
               ),
               child: Text(
                 current?.code ?? 'N/D',
                 style: TextStyle(
                   fontSize: current != null ? 18 : 11,
                   fontWeight: FontWeight.bold,
-                  color: current != null ? Colors.white : Colors.grey.shade600,
+                  color: current != null ? current.textColor : Colors.grey.shade700,
                 ),
               ),
             ),
@@ -327,7 +334,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
             Expanded(
               child: Text(
                 info.title,
-                style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.teal),
+                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.teal.shade800),
               ),
             ),
           ],
@@ -344,7 +351,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
                   color: current != null ? current.color.withAlpha(28) : Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: current != null ? current.color.withAlpha(90) : Colors.grey.shade300,
+                    color: current != null ? current.color.withAlpha(90) : Colors.grey.shade400,
                   ),
                 ),
                 child: Text(
@@ -354,14 +361,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: current != null ? Colors.black87 : Colors.grey.shade700,
+                    color: current != null ? Colors.black87 : Colors.grey.shade800,
                   ),
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'O que significa?',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.teal),
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.teal.shade800),
               ),
               const SizedBox(height: 4),
               Text(
@@ -369,9 +376,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
                 style: const TextStyle(fontSize: 14, height: 1.4, color: Colors.black87),
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'Escala de referência',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.teal),
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.teal.shade800),
               ),
               const SizedBox(height: 8),
               ...info.scale.map((item) {
@@ -390,17 +397,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
                         ),
                         child: Text(
                           item.code,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                            color: item.textColor,
                           ),
                         ),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          item.label,
+                          isSelected ? '${item.label} (Atual)' : item.label,
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
@@ -425,11 +432,15 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
     );
   }
   
+  double? _scaleFromGrams(double? grams, double factor) =>
+      grams != null ? grams * factor : null;
+
   // --- MUDANÇA PRINCIPAL AQUI: A TAB NUTRICIONAL AGORA É 100% DINÂMICA ---
   Widget _buildNutritionsTab(BuildContext context) {
     final nutriments = widget.product.nutriments;
-    
-    // 1. Criamos a lista "mestra" de todos os nutrientes que queremos mostrar
+
+    // A API Open Food Facts padroniza *_100g e *_serving em gramas (g) para sais,
+    // vitaminas e minerais; convertemos para mg (* 1000) ou µg (* 1000000) na exibição.
     final List<Map<String, dynamic>> nutrientList = [
       {'label': 'Calorias', 'value': nutriments.energyKcal, 'unit': 'kcal'},
       {'label': 'Gorduras', 'value': nutriments.fat, 'unit': 'g'},
@@ -440,16 +451,16 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
       {'label': 'Fibras', 'value': nutriments.fiber, 'unit': 'g'},
       {'label': 'Proteínas', 'value': nutriments.proteins, 'unit': 'g'},
       {'label': 'Sal', 'value': nutriments.salt, 'unit': 'g'},
-      {'label': 'Sódio', 'value': nutriments.sodium, 'unit': 'mg'},
-      {'label': 'Vitamina A', 'value': nutriments.vitaminA, 'unit': 'µg'},
-      {'label': 'Vitamina C', 'value': nutriments.vitaminC, 'unit': 'mg'},
-      {'label': 'Vitamina D', 'value': nutriments.vitaminD, 'unit': 'µg'},
-      {'label': 'Vitamina B1', 'value': nutriments.vitaminB1, 'unit': 'mg'},
-      {'label': 'Vitamina B6', 'value': nutriments.vitaminB6, 'unit': 'mg'},
-      {'label': 'Vitamina B12', 'value': nutriments.vitaminB12, 'unit': 'µg'},
-      {'label': 'Cálcio', 'value': nutriments.calcium, 'unit': 'mg'},
-      {'label': 'Ferro', 'value': nutriments.iron, 'unit': 'mg'},
-      {'label': 'Magnésio', 'value': nutriments.magnesium, 'unit': 'mg'},
+      {'label': 'Sódio', 'value': _scaleFromGrams(nutriments.sodium, 1000), 'unit': 'mg'},
+      {'label': 'Vitamina A', 'value': _scaleFromGrams(nutriments.vitaminA, 1000000), 'unit': 'µg'},
+      {'label': 'Vitamina C', 'value': _scaleFromGrams(nutriments.vitaminC, 1000), 'unit': 'mg'},
+      {'label': 'Vitamina D', 'value': _scaleFromGrams(nutriments.vitaminD, 1000000), 'unit': 'µg'},
+      {'label': 'Vitamina B1', 'value': _scaleFromGrams(nutriments.vitaminB1, 1000), 'unit': 'mg'},
+      {'label': 'Vitamina B6', 'value': _scaleFromGrams(nutriments.vitaminB6, 1000), 'unit': 'mg'},
+      {'label': 'Vitamina B12', 'value': _scaleFromGrams(nutriments.vitaminB12, 1000000), 'unit': 'µg'},
+      {'label': 'Cálcio', 'value': _scaleFromGrams(nutriments.calcium, 1000), 'unit': 'mg'},
+      {'label': 'Ferro', 'value': _scaleFromGrams(nutriments.iron, 1000), 'unit': 'mg'},
+      {'label': 'Magnésio', 'value': _scaleFromGrams(nutriments.magnesium, 1000), 'unit': 'mg'},
     ];
 
     // 2. Filtra a lista para incluir apenas os nutrientes que TÊM valor
@@ -458,10 +469,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
       if (nutrient['value'] != null && nutrient['value'].toString().isNotEmpty) {
         nutrientRows.add(
           _buildNutrimentRow(
-            nutrient['label'], 
-            nutrient['value'], 
-            nutrient['unit']
-          )
+            nutrient['label'],
+            nutrient['value'],
+            nutrient['unit'],
+          ),
         );
         nutrientRows.add(const Divider(height: 20));
       }
@@ -487,7 +498,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
                 children: [
                   Text(
                     'Informação Nutricional (${nutriments.dataPer})', // Título dinâmico!
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.teal),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.teal.shade800),
                   ),
                   const SizedBox(height: 16),
                   
@@ -496,7 +507,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
                       padding: EdgeInsets.symmetric(vertical: 20.0),
                       child: Text(
                         'Informações nutricionais não disponíveis para este produto.',
-                        style: TextStyle(fontSize: 16, color: Colors.black54),
+                        style: TextStyle(fontSize: 16, color: Colors.black87),
                         textAlign: TextAlign.center,
                       ),
                     )
@@ -619,9 +630,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (allergens.isNotEmpty) ...[
-            const Text(
+            Text(
               'Alergênicos detectados',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.teal),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.teal.shade800),
             ),
             const SizedBox(height: 8),
             Wrap(
@@ -629,8 +640,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
               runSpacing: 8,
               children: allergens.map((label) {
                 return Chip(
+                  avatar: const Icon(Icons.warning_amber_rounded, size: 18, color: Colors.white),
                   label: Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  backgroundColor: Colors.red,
+                  backgroundColor: Colors.red.shade800,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                   side: BorderSide.none,
                 );
@@ -638,9 +650,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
             ),
             const SizedBox(height: 24),
           ],
-          const Text(
+          Text(
             'Ingredientes',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.teal),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.teal.shade800),
           ),
           const SizedBox(height: 16),
           Text(
@@ -655,22 +667,19 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
   }
 
   // --- FUNÇÃO AUXILIAR (Corrigida para lidar com int/double/string) ---
-  Widget _buildNutrimentRow(String label, dynamic value, String unit) {
-    String displayValue = 'N/A';
+  Widget _buildNutrimentRow(
+    String label,
+    dynamic value,
+    String unit,
+  ) {
+    String displayValue = 'N/D';
     if (value != null) {
-      // O 'value' pode ser double, int ou String. Convertemos tudo para String.
-      // E usamos 'double.tryParse' para formatar números corretamente.
-      final double? numericValue = double.tryParse(value.toString());
-      
+      final double? numericValue = double.tryParse(
+        value.toString().trim().replaceAll(',', '.'),
+      );
+
       if (numericValue != null) {
-        // Lógica especial para vitaminas/minerais que vêm em valores muito pequenos
-        if (unit == 'mg' && numericValue < 1) {
-           displayValue = '${(numericValue * 1000).toStringAsFixed(2)} µg'; // Converte mg para µg
-        } else if (unit == 'µg' && numericValue < 0.01) {
-           displayValue = '${(numericValue * 1000).toStringAsFixed(2)} ng'; // Converte µg para ng
-        } else {
-           displayValue = '${numericValue.toStringAsFixed(2)} $unit';
-        }
+        displayValue = '${numericValue.toStringAsFixed(2)} $unit';
       } else if (value is String && value.isNotEmpty) {
         displayValue = '$value $unit';
       }
@@ -680,7 +689,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontSize: 16)),
+          Expanded(
+            child: Text(label, style: const TextStyle(fontSize: 16)),
+          ),
+          const SizedBox(width: 8),
           Text(
             displayValue,
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
@@ -695,9 +707,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> with SingleTi
 class _ScoreScaleItem {
   final String code;
   final Color color;
+  final Color textColor;
   final String label;
 
-  const _ScoreScaleItem(this.code, this.color, this.label);
+  const _ScoreScaleItem(this.code, this.color, this.textColor, this.label);
 }
 
 /// Agrupa os metadados exibidos no card e no diálogo explicativo de um índice.

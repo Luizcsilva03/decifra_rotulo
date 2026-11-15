@@ -1,17 +1,16 @@
 // lib/screens/search_by_code_screen.dart
 
-import 'package:decifra_rotulo/models/product_model.dart';
 import 'package:decifra_rotulo/screens/product_detail_screen.dart';
 import 'package:decifra_rotulo/screens/profile_screen.dart';
 import 'package:decifra_rotulo/services/ad_service.dart';
 import 'package:decifra_rotulo/services/api_exceptions.dart';
 import 'package:decifra_rotulo/services/auth_service.dart';
+import 'package:decifra_rotulo/services/history_service.dart';
 import 'package:decifra_rotulo/services/open_food_facts_service.dart';
 import 'package:firebase_auth/firebase_auth.dart'; // <-- Import necessário para o User
 import 'package:flutter/material.dart';
-import 'package:hive/hive.dart';
+import 'package:flutter/services.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
-import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 
 class SearchByCodeScreen extends StatefulWidget {
   const SearchByCodeScreen({super.key});
@@ -28,12 +27,6 @@ class _SearchByCodeScreenState extends State<SearchByCodeScreen> {
   final _adService = AdService();
   bool _isLoading = false;
 
-  final maskFormatter = MaskTextInputFormatter(
-    mask: '#############',
-    filter: {"#": RegExp(r'[0-9]')},
-    type: MaskAutoCompletionType.lazy,
-  );
-
   Future<void> _searchProduct() async {
     FocusScope.of(context).unfocus();
     if (!(_formKey.currentState?.validate() ?? false)) return;
@@ -41,11 +34,10 @@ class _SearchByCodeScreenState extends State<SearchByCodeScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final product = await _apiService.getProduct(maskFormatter.getUnmaskedText());
+      final product = await _apiService.getProduct(_barcodeController.text.trim());
       final user = _authService.currentUser;
       if (user != null) {
-        final historyBox = await Hive.openBox<Product>('history_${user.uid}');
-        await historyBox.put(product.barcode, product);
+        await HistoryService.saveProduct(user.uid, product);
       }
 
       _adService.incrementAndShowInterstitialAd();
@@ -60,11 +52,11 @@ class _SearchByCodeScreenState extends State<SearchByCodeScreen> {
         );
       }
     } on ProductNotFoundException catch (e) {
-      _showErrorDialog(e.message);
+      if (mounted) _showErrorDialog('Produto não encontrado', e.message);
     } on NetworkException catch (e) {
-      _showErrorDialog(e.message);
+      if (mounted) _showErrorDialog('Erro de conexão', e.message);
     } catch (e) {
-      _showErrorDialog('Produto não encontrado ou código inválido.');
+      if (mounted) _showErrorDialog('Erro', 'Ocorreu um erro inesperado. Tente novamente.');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -72,11 +64,11 @@ class _SearchByCodeScreenState extends State<SearchByCodeScreen> {
     }
   }
 
-  void _showErrorDialog(String message) {
+  void _showErrorDialog(String title, String message) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Erro'),
+        title: Text(title),
         content: Text(message),
         actions: <Widget>[
           TextButton(
@@ -103,70 +95,80 @@ class _SearchByCodeScreenState extends State<SearchByCodeScreen> {
       body: SafeArea(
         child: Stack(
           children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Image.asset('assets/logo.png', height: 80),
-                    const SizedBox(height: 10),
-                    const Text(
-                      'Decifra Rótulo',
-                      style: TextStyle(color: Colors.black, fontSize: 24, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 30),
-                    const Text(
-                      'Digite o número do código de barras do produto que você deseja consultar.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 16, color: Colors.grey),
-                    ),
-                    const SizedBox(height: 20),
-                    TextFormField(
-                      controller: _barcodeController,
-                      decoration: const InputDecoration(
-                        labelText: 'Código de Barras',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.barcode_reader),
-                        counterText: "",
+            Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Image.asset('assets/logo.png', height: 80),
+                      const SizedBox(height: 10),
+                      const Text(
+                        'Decifra Rótulo',
+                        style: TextStyle(color: Colors.black, fontSize: 24, fontWeight: FontWeight.bold),
                       ),
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [maskFormatter],
-                      maxLength: 13,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Por favor, insira o código.';
-                        }
-                        if (maskFormatter.getUnmaskedText().length < 13) {
-                          return 'O código de barras deve ter 13 dígitos.';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 24),
-                    if (_isLoading)
-                      LoadingAnimationWidget.staggeredDotsWave(color: Colors.teal, size: 50)
-                    else
-                      ElevatedButton.icon(
-                        onPressed: _searchProduct,
-                        icon: const Icon(Icons.search),
-                        label: const Text('Pesquisar'),
-                        style: ElevatedButton.styleFrom(
-                          minimumSize: const Size(double.infinity, 50),
-                          backgroundColor: Colors.teal,
-                          foregroundColor: Colors.white,
-                          textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      const SizedBox(height: 30),
+                      Text(
+                        'Digite o número do código de barras do produto que você deseja consultar.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 16, color: Colors.grey.shade700),
+                      ),
+                      const SizedBox(height: 20),
+                      TextFormField(
+                        controller: _barcodeController,
+                        decoration: const InputDecoration(
+                          labelText: 'Código de Barras',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.barcode_reader),
+                          counterText: "",
                         ),
+                        keyboardType: TextInputType.number,
+                        textInputAction: TextInputAction.search,
+                        onFieldSubmitted: (_) => _searchProduct(),
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        maxLength: 14,
+                        validator: (value) {
+                          final digits = value?.trim() ?? '';
+                          if (digits.isEmpty) {
+                            return 'Por favor, insira o código.';
+                          }
+                          if (digits.length < 8 || digits.length > 14) {
+                            return 'O código de barras deve ter entre 8 e 14 dígitos.';
+                          }
+                          return null;
+                        },
                       ),
-                  ],
+                      const SizedBox(height: 24),
+                      if (_isLoading)
+                        Semantics(
+                          liveRegion: true,
+                          label: 'Buscando produto',
+                          child: LoadingAnimationWidget.staggeredDotsWave(color: Colors.teal.shade700, size: 50),
+                        )
+                      else
+                        ElevatedButton.icon(
+                          onPressed: _searchProduct,
+                          icon: const Icon(Icons.search),
+                          label: const Text('Pesquisar'),
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size(double.infinity, 50),
+                            backgroundColor: Colors.teal.shade700,
+                            foregroundColor: Colors.white,
+                            textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),
-            
+
             // --- CORREÇÃO AQUI: ÍCONE DE PERFIL REATIVO ---
             StreamBuilder<User?>(
               stream: _authService.user, // Ouve as mudanças (foto, login, etc)
+              initialData: _authService.currentUser,
               builder: (context, snapshot) {
                 final user = snapshot.data;
                 final String initials = user?.displayName?.isNotEmpty == true
@@ -179,16 +181,18 @@ class _SearchByCodeScreenState extends State<SearchByCodeScreen> {
                   child: Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: IconButton(
+                      tooltip: 'Abrir perfil do usuário',
                       icon: CircleAvatar(
                         radius: 18,
                         backgroundColor: Colors.grey.shade200,
                         backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
-                        child: photoUrl == null 
-                          ? Text(
-                              initials,
-                              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.teal),
-                            )
-                          : null,
+                        onBackgroundImageError: photoUrl != null ? (_, __) {} : null,
+                        child: photoUrl == null
+                            ? Text(
+                                initials,
+                                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.teal.shade800),
+                              )
+                            : null,
                       ),
                       onPressed: () {
                         Navigator.push(
@@ -199,7 +203,7 @@ class _SearchByCodeScreenState extends State<SearchByCodeScreen> {
                     ),
                   ),
                 );
-              }
+              },
             ),
             // --- FIM DA CORREÇÃO ---
           ],

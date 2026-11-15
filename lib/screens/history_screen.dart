@@ -4,7 +4,7 @@ import 'package:decifra_rotulo/models/product_model.dart';
 import 'package:decifra_rotulo/screens/product_detail_screen.dart';
 import 'package:decifra_rotulo/screens/profile_screen.dart';
 import 'package:decifra_rotulo/services/auth_service.dart';
-import 'package:decifra_rotulo/widgets/reusable_banner_ad.dart';
+import 'package:decifra_rotulo/services/history_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -18,7 +18,7 @@ class HistoryScreen extends StatefulWidget {
 
 class _HistoryScreenState extends State<HistoryScreen> {
   final AuthService _authService = AuthService();
-  late Future<Box<Product>> _historyBoxFuture;
+  late Future<Box<Product>?> _historyBoxFuture;
 
   @override
   void initState() {
@@ -26,19 +26,35 @@ class _HistoryScreenState extends State<HistoryScreen> {
     _historyBoxFuture = _openHistoryBox();
   }
 
-  Future<Box<Product>> _openHistoryBox() async {
+  Future<Box<Product>?> _openHistoryBox() async {
     final user = _authService.currentUser;
-    if (user != null) {
-      return await Hive.openBox<Product>('history_${user.uid}');
-    }
-    // Lida com o caso raro de usuário nulo ao abrir a tela
-    return await Hive.openBox<Product>('empty_history_box_${DateTime.now().millisecondsSinceEpoch}');
+    if (user == null) return null;
+    return HistoryService.openUserBox(user.uid);
+  }
+
+  void _deleteProductWithUndo(Box<Product> box, Product product) {
+    final deletedKey = product.key;
+    if (deletedKey == null) return;
+    box.delete(deletedKey);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("${product.productName} removido."),
+        action: SnackBarAction(
+          label: "DESFAZER",
+          onPressed: () {
+            if (box.isOpen) {
+              box.put(deletedKey, product);
+            }
+          },
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      bottomNavigationBar: const ReusableBannerAd(),
       body: SafeArea(
         child: Column(
           children: [
@@ -46,6 +62,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             // --- CABEÇALHO REATIVO (Inalterado) ---
             StreamBuilder<User?>(
               stream: _authService.user,
+              initialData: _authService.currentUser,
               builder: (context, snapshot) {
                 final user = snapshot.data;
                 final String initials = user?.displayName?.isNotEmpty == true
@@ -66,10 +83,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         ],
                       ),
                       IconButton(
+                        tooltip: 'Abrir perfil do usuário',
                         icon: CircleAvatar(
                           radius: 16,
                           backgroundColor: Colors.grey.shade200,
                           backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
+                          onBackgroundImageError: photoUrl != null ? (_, __) {} : null,
                           child: photoUrl == null 
                             ? Text(
                                 initials,
@@ -92,28 +111,40 @@ class _HistoryScreenState extends State<HistoryScreen> {
             
             // --- LISTA DE HISTÓRICO (Com "Deslizar para Apagar") ---
             Expanded(
-              child: FutureBuilder<Box<Product>>(
+              child: FutureBuilder<Box<Product>?>(
                 future: _historyBoxFuture,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
                   }
-                  if (snapshot.hasError || !snapshot.hasData) {
+                  if (snapshot.hasError) {
                     return const Center(child: Text('Não foi possível carregar o histórico.'));
                   }
-                  final historyBox = snapshot.data!;
+                  final historyBox = snapshot.data;
+                  if (historyBox == null || !historyBox.isOpen) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Text(
+                          'Faça login para visualizar seu histórico de produtos.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 16, color: Colors.grey.shade700),
+                        ),
+                      ),
+                    );
+                  }
                   
                   return ValueListenableBuilder(
                     valueListenable: historyBox.listenable(),
                     builder: (context, Box<Product> box, _) {
                       if (box.values.isEmpty) {
-                        return const Center(
+                        return Center(
                           child: Padding(
-                            padding: EdgeInsets.all(16.0),
+                            padding: const EdgeInsets.all(16.0),
                             child: Text(
                               'Seu histórico de produtos escaneados aparecerá aqui.',
                               textAlign: TextAlign.center,
-                              style: TextStyle(fontSize: 16, color: Colors.grey),
+                              style: TextStyle(fontSize: 16, color: Colors.grey.shade700),
                             ),
                           ),
                         );
@@ -125,56 +156,39 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         itemCount: products.length,
                         itemBuilder: (context, index) {
                           final product = products[index];
+                          final itemKey = product.barcode.isNotEmpty
+                              ? ValueKey(product.barcode)
+                              : ValueKey('${product.productName}_${product.key ?? index}');
 
-                          // --- MUDANÇA PRINCIPAL AQUI ---
-                          // Cada item da lista agora é um widget "Dispensável"
                           return Dismissible(
-                            // 1. Chave Única: O Flutter precisa saber quem é quem.
-                            // Usamos o barcode (que é único) como chave.
-                            key: Key(product.barcode),
-                            
-                            // 2. Ação ao Deslizar: O que fazer quando o usuário desliza.
-                            onDismissed: (direction) {
-                              // Salva o produto antes de apagar, para o "Desfazer"
-                              final deletedProduct = product;
-                              final deletedKey = product.key; // A chave do Hive
-
-                              // Remove o item da caixa do Hive
-                              box.delete(deletedKey);
-
-                              // Mostra uma notificação com a opção de desfazer
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text("${deletedProduct.productName} removido."),
-                                  action: SnackBarAction(
-                                    label: "DESFAZER",
-                                    onPressed: () {
-                                      // Coloca o item de volta no banco de dados
-                                      box.put(deletedKey, deletedProduct);
-                                    },
-                                  ),
-                                ),
-                              );
-                            },
-
-                            // 3. Fundo Visual: O que aparece por trás (o ícone de lixeira)
+                            key: itemKey,
+                            onDismissed: (_) => _deleteProductWithUndo(box, product),
                             background: Container(
-                              color: Colors.redAccent.shade400,
+                              color: Colors.red.shade700,
                               alignment: Alignment.centerRight,
                               padding: const EdgeInsets.symmetric(horizontal: 20.0),
                               child: const Icon(Icons.delete, color: Colors.white),
                             ),
-                            
-                            // 4. Direção: Só permite deslizar da direita para a esquerda
                             direction: DismissDirection.endToStart,
-
-                            // 5. O Conteúdo (o ListTile que já tínhamos):
                             child: ListTile(
                               leading: product.imageUrl.isNotEmpty
-                                  ? Image.network(product.imageUrl, width: 50, height: 50, fit: BoxFit.cover)
-                                  : const Icon(Icons.fastfood, size: 40, color: Colors.grey),
+                                  ? Image.network(
+                                      product.imageUrl,
+                                      width: 50,
+                                      height: 50,
+                                      fit: BoxFit.cover,
+                                      excludeFromSemantics: true,
+                                      errorBuilder: (_, __, ___) =>
+                                          Icon(Icons.fastfood, size: 40, color: Colors.grey.shade700),
+                                    )
+                                  : Icon(Icons.fastfood, size: 40, color: Colors.grey.shade700),
                               title: Text(product.productName, style: const TextStyle(fontWeight: FontWeight.w500)),
                               subtitle: Text(product.brands),
+                              trailing: IconButton(
+                                icon: Icon(Icons.delete_outline, color: Colors.grey.shade700),
+                                tooltip: 'Remover ${product.productName} do histórico',
+                                onPressed: () => _deleteProductWithUndo(box, product),
+                              ),
                               onTap: () {
                                 Navigator.push(
                                   context,
@@ -185,7 +199,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
                               },
                             ),
                           );
-                          // --- FIM DA MUDANÇA ---
                         },
                       );
                     },

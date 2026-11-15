@@ -39,25 +39,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _pickAndUploadImage() async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 50);
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 50);
 
-    if (pickedFile != null) {
+      if (pickedFile == null || !mounted) return;
+
       setState(() => _isUploading = true);
       final imageFile = File(pickedFile.path);
-      
+
       // O serviço de auth já atualiza o 'currentUser' internamente
-      await _authService.uploadProfilePicture(imageFile);
-      
-      if (mounted) {
-        // --- A CORREÇÃO MÁGICA ---
-        // Forçamos um setState() que atualiza _user e _isUploading.
-        // Isso fará o build() rodar de novo e ler a nova photoURL.
-        setState(() {
-          _user = _authService.currentUser; // Pega o usuário ATUALIZADO
-          _isUploading = false;
-        });
+      final url = await _authService.uploadProfilePicture(imageFile);
+
+      if (!mounted) return;
+      setState(() {
+        _user = _authService.currentUser; // Pega o usuário ATUALIZADO
+        _isUploading = false;
+      });
+
+      if (url == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Não foi possível atualizar a foto. Tente novamente.'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
       }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isUploading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Não foi possível acessar a galeria de imagens.'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
     }
   }
 
@@ -120,83 +136,121 @@ class _ProfileScreenState extends State<ProfileScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black54),
+        iconTheme: const IconThemeData(color: Colors.black87),
       ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Spacer(flex: 2),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: (constraints.maxHeight - 48).clamp(0.0, double.infinity),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: kToolbarHeight),
 
-            // -- SEÇÃO DO AVATAR, NOME E E-MAIL --
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                CircleAvatar(
-                  radius: 60,
-                  backgroundColor: Colors.teal.shade100,
-                  backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
-                  child: _isUploading
-                      ? const CircularProgressIndicator()
-                      : (photoUrl == null
-                          ? Text(initials, style: TextStyle(fontSize: 50, color: Colors.teal.shade800))
-                          : null),
-                ),
-                Positioned(
-                  bottom: 0,
-                  right: MediaQuery.of(context).size.width / 2 - 80,
-                  child: CircleAvatar(
-                    radius: 20,
-                    backgroundColor: Colors.white,
-                    child: IconButton(
-                      icon: const Icon(Icons.edit, size: 20, color: Colors.teal),
-                      onPressed: _pickAndUploadImage,
-                    ),
+                  // -- SEÇÃO DO AVATAR, NOME E E-MAIL --
+                  Column(
+                    children: [
+                      Center(
+                        child: SizedBox(
+                          width: 128,
+                          height: 128,
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              CircleAvatar(
+                                radius: 60,
+                                backgroundColor: Colors.teal.shade100,
+                                backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
+                                child: _isUploading
+                                    ? Semantics(
+                                        liveRegion: true,
+                                        label: 'Enviando nova foto de perfil',
+                                        child: const CircularProgressIndicator(),
+                                      )
+                                    : (photoUrl == null
+                                        ? Text(
+                                            initials,
+                                            style: TextStyle(fontSize: 50, color: Colors.teal.shade900),
+                                          )
+                                        : null),
+                              ),
+                              Positioned(
+                                bottom: 0,
+                                right: 0,
+                                child: Material(
+                                  color: Colors.white,
+                                  shape: const CircleBorder(),
+                                  elevation: 2,
+                                  child: IconButton(
+                                    tooltip: 'Alterar foto de perfil',
+                                    icon: Icon(Icons.edit, size: 20, color: Colors.teal.shade800),
+                                    onPressed: _isUploading ? null : _pickAndUploadImage,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        _user!.displayName ?? 'Usuário Anônimo',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _user!.email ?? 'E-mail não disponível',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 16, color: Colors.grey.shade700),
+                      ),
+                    ],
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            Text(
-              _user!.displayName ?? 'Usuário Anônimo',
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _user!.email ?? 'E-mail não disponível',
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 16, color: Colors.grey),
-            ),
-            // -- FIM DA SEÇÃO DO AVATAR --
-            
-            const Spacer(flex: 3),
+                  // -- FIM DA SEÇÃO DO AVATAR --
 
-            // -- BOTÃO "SOBRE" --
-            TextButton.icon(
-              icon: const Icon(Icons.info_outline, color: Colors.grey),
-              label: const Text('Sobre o app', style: TextStyle(color: Colors.grey)),
-              onPressed: _showAboutDialog,
-            ),
-            const SizedBox(height: 10),
+                  const SizedBox(height: 32),
 
-            // -- BOTÃO DE LOGOUT --
-            IconButton(
-              icon: const Icon(Icons.logout, color: Colors.redAccent, size: 30),
-              onPressed: () {
-                _authService.signOut();
-                if(mounted) {
-                  // Ajuste: Garante que volte até a tela de login
-                  Navigator.of(context).popUntil((route) => route.isFirst);
-                }
-              },
+                  Column(
+                    children: [
+                      // -- BOTÃO "SOBRE" --
+                      TextButton.icon(
+                        icon: Icon(Icons.info_outline, color: Colors.grey.shade800),
+                        label: Text('Sobre o app', style: TextStyle(color: Colors.grey.shade800)),
+                        onPressed: _showAboutDialog,
+                      ),
+                      const SizedBox(height: 10),
+
+                      // -- BOTÃO DE LOGOUT --
+                      IconButton(
+                        tooltip: 'Sair da conta',
+                        icon: Icon(Icons.logout, color: Colors.red.shade700, size: 30),
+                        onPressed: () async {
+                          final navigator = Navigator.of(context);
+                          await _authService.signOut();
+                          if (mounted) {
+                            // Ajuste: Garante que volte até a tela de login
+                            navigator.popUntil((route) => route.isFirst);
+                          }
+                        },
+                      ),
+                      Text(
+                        'Sair',
+                        style: TextStyle(color: Colors.red.shade700),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 20),
+                    ],
+                  ),
+                ],
+              ),
             ),
-            const Text('Sair', style: TextStyle(color: Colors.redAccent), textAlign: TextAlign.center),
-            const SizedBox(height: 20),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

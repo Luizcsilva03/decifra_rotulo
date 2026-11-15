@@ -51,7 +51,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyCkTh5A8eclEWsvylo5BV-at4VMG547T3o',
-    appId: '1:6832643373:android:d7f6b5308517b9690a07a4',
+    appId: '1:6832643373:android:a4b866a2db47904d0a07a4',
     messagingSenderId: '6832643373',
     projectId: 'decifra-rotulo',
     storageBucket: 'decifra-rotulo.firebasestorage.app',

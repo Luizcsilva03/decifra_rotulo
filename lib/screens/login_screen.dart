@@ -34,10 +34,12 @@ class _LoginScreenState extends State<LoginScreen> {
           _passwordController.text.trim()
         );
       } on FirebaseAuthException {
+        if (!mounted) return;
         setState(() {
           _errorMessage = 'E-mail ou senha inválidos.';
         });
       } catch (e) {
+        if (!mounted) return;
         setState(() {
           _errorMessage = 'Ocorreu um erro. Tente novamente.';
         });
@@ -49,15 +51,41 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _showPasswordResetDialog() {
+  Future<void> _signInWithGoogle() async {
+    if (_isLoading) return;
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final user = await _authService.signInWithGoogle();
+      if (user == null && mounted) {
+        setState(() {
+          _errorMessage = 'Não foi possível entrar com o Google.';
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Erro ao conectar com o Google. Tente novamente.';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _showPasswordResetDialog() async {
     final resetEmailController = TextEditingController();
-    showDialog(
+    await showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         title: const Text("Recuperar Senha"),
-        content: SizedBox(
-          height: 150,
+        content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -76,17 +104,37 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const Text("Cancelar"),
           ),
           ElevatedButton(
-            onPressed: () {
-              if (resetEmailController.text.isNotEmpty) {
-                _authService.sendPasswordResetEmail(resetEmailController.text.trim());
-                Navigator.of(context).pop();
+            onPressed: () async {
+              final email = resetEmailController.text.trim();
+              if (email.isEmpty || !email.contains('@')) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Link de recuperação enviado para seu e-mail (se ele estiver cadastrado).')),
+                  const SnackBar(content: Text('Digite um e-mail válido.')),
                 );
+                return;
+              }
+              Navigator.of(dialogContext).pop();
+              try {
+                await _authService.sendPasswordResetEmail(email);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Link de recuperação enviado para seu e-mail (se ele estiver cadastrado).'),
+                    ),
+                  );
+                }
+              } catch (_) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('Não foi possível enviar o e-mail de recuperação. Tente novamente.'),
+                      backgroundColor: Colors.red.shade800,
+                    ),
+                  );
+                }
               }
             },
             child: const Text("Enviar"),
@@ -94,6 +142,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ],
       ),
     );
+    resetEmailController.dispose();
   }
 
   @override
@@ -115,26 +164,33 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Image.asset('assets/logo.png', height: 100),
+                Image.asset(
+                  'assets/logo.png',
+                  height: 100,
+                  semanticLabel: 'Logo do Decifra Rótulo',
+                ),
                 const SizedBox(height: 20),
                 const Text('Bem-vindo ao Decifra Rótulo',
                     style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 20),
 
                 if (_errorMessage != null)
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    margin: const EdgeInsets.only(bottom: 20),
-                    decoration: BoxDecoration(
-                      color: Colors.red.shade100,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.error_outline, color: Colors.red.shade800),
-                        const SizedBox(width: 10),
-                        Expanded(child: Text(_errorMessage!, style: TextStyle(color: Colors.red.shade800))),
-                      ],
+                  Semantics(
+                    liveRegion: true,
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      margin: const EdgeInsets.only(bottom: 20),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade100,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.error_outline, color: Colors.red.shade800),
+                          const SizedBox(width: 10),
+                          Expanded(child: Text(_errorMessage!, style: TextStyle(color: Colors.red.shade800))),
+                        ],
+                      ),
                     ),
                   ),
 
@@ -153,6 +209,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     labelText: 'Senha',
                     border: const OutlineInputBorder(),
                     suffixIcon: IconButton(
+                      tooltip: _isPasswordVisible ? 'Ocultar senha' : 'Mostrar senha',
                       icon: Icon(
                         // Invertemos a lógica aqui
                         _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
@@ -178,13 +235,17 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 10),
                 
                 if (_isLoading)
-                  const CircularProgressIndicator()
+                  Semantics(
+                    liveRegion: true,
+                    label: 'Entrando na conta',
+                    child: const CircularProgressIndicator(),
+                  )
                 else
                   ElevatedButton(
                     onPressed: _submit,
                     style: ElevatedButton.styleFrom(
                       minimumSize: const Size(double.infinity, 50),
-                      backgroundColor: Colors.teal,
+                      backgroundColor: Colors.teal.shade700,
                       foregroundColor: Colors.white,
                     ),
                     child: const Text('Entrar'),
@@ -195,12 +256,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 ElevatedButton.icon(
                   icon: Image.asset('assets/google_logo.png', height: 24.0),
                   label: const Text('Continuar com Google'),
-                  onPressed: () => _authService.signInWithGoogle(),
+                  onPressed: _isLoading ? null : _signInWithGoogle,
                   style: ElevatedButton.styleFrom(
                     foregroundColor: Colors.black87,
                     backgroundColor: Colors.white,
                     minimumSize: const Size(double.infinity, 50),
-                    shape: const RoundedRectangleBorder(side: BorderSide(color: Colors.grey)),
+                    shape: RoundedRectangleBorder(side: BorderSide(color: Colors.grey.shade700)),
                   ),
                 ),
                 const SizedBox(height: 20),

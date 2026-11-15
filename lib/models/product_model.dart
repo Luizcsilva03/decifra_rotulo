@@ -40,22 +40,50 @@ class Product extends HiveObject {
   });
 
   factory Product.fromJson(Map<String, dynamic> json) {
-    final productData = json['product'];
-    
+    final rawProduct = json['product'];
+    final productData = rawProduct is Map<String, dynamic>
+        ? rawProduct
+        : (rawProduct is Map
+            ? Map<String, dynamic>.from(rawProduct)
+            : <String, dynamic>{});
+
     // Passa o JSON inteiro do 'product' para o Nutriments.fromJson
-    final nutriments = Nutriments.fromJson(productData ?? {});
-    
+    final nutriments = Nutriments.fromJson(productData);
+
+    String? nonEmptyString(dynamic value) {
+      if (value == null) return null;
+      final text = value.toString().trim();
+      return text.isEmpty ? null : text;
+    }
+
+    int? toInt(dynamic value) {
+      if (value is int) return value;
+      if (value is num) return value.toInt();
+      if (value is String) {
+        final trimmed = value.trim();
+        return int.tryParse(trimmed) ?? double.tryParse(trimmed)?.toInt();
+      }
+      return null;
+    }
+
+    final rawAllergens = productData['allergens_tags'];
+    final allergensTags = rawAllergens is List
+        ? rawAllergens.map((e) => e.toString()).toList()
+        : null;
+
     return Product(
-      productName: productData?['product_name'] ?? 'Nome não disponível',
-      brands: productData?['brands'] ?? 'Marca não disponível',
-      imageUrl: productData?['image_url'] ?? '',
+      productName: nonEmptyString(productData['product_name']) ?? 'Nome não disponível',
+      brands: nonEmptyString(productData['brands']) ?? 'Marca não disponível',
+      imageUrl: nonEmptyString(productData['image_url']) ?? '',
       nutriments: nutriments,
-      barcode: json['code'],
-      ingredientsText: productData?['ingredients_text_pt'] ?? productData?['ingredients_text'] ?? 'Ingredientes não informados.',
-      nutritionGrades: productData?['nutrition_grades'] as String?,
-      novaGroup: productData?['nova_group'] as int?,
-      ecoscoreGrade: productData?['ecoscore_grade'] as String?,
-      allergensTags: (productData?['allergens_tags'] as List<dynamic>?)?.map((e) => e.toString()).toList(),
+      barcode: nonEmptyString(json['code']) ?? nonEmptyString(productData['code']) ?? '',
+      ingredientsText: nonEmptyString(productData['ingredients_text_pt']) ??
+          nonEmptyString(productData['ingredients_text']) ??
+          'Ingredientes não informados.',
+      nutritionGrades: nonEmptyString(productData['nutrition_grades']),
+      novaGroup: toInt(productData['nova_group']),
+      ecoscoreGrade: nonEmptyString(productData['ecoscore_grade']),
+      allergensTags: allergensTags,
     );
   }
 }
@@ -130,12 +158,17 @@ class Nutriments {
 
   // --- MUDANÇA 2: O CONSTRUTOR "INTELIGENTE" ---
   factory Nutriments.fromJson(Map<String, dynamic> json) {
-    final nutrimentsData = json['nutriments'] as Map<String, dynamic>? ?? {};
-    
+    final rawNutriments = json['nutriments'];
+    final nutrimentsData = rawNutriments is Map<String, dynamic>
+        ? rawNutriments
+        : (rawNutriments is Map
+            ? Map<String, dynamic>.from(rawNutriments)
+            : <String, dynamic>{});
+
     // 1. Descobre qual unidade usar (100g ou porção)
-    String dataPer = (json['nutrition_data_per'] as String? ?? '100g');
+    String dataPer = (json['nutrition_data_per']?.toString() ?? '100g');
     String suffix; // O sufixo que vamos procurar (ex: '_100g' ou '_serving')
-    
+
     if (dataPer.toLowerCase().contains('serving')) {
       dataPer = 'por porção';
       suffix = '_serving';
@@ -143,20 +176,30 @@ class Nutriments {
       dataPer = 'por 100g';
       suffix = '_100g';
     }
-    
+
     // Função auxiliar para converter valores (String, int, double) para double
     double? toDouble(dynamic value) {
       if (value is num) return value.toDouble();
-      if (value is String) return double.tryParse(value);
+      if (value is String) {
+        final normalized = value.trim().replaceAll(',', '.');
+        if (normalized.isEmpty) return null;
+        return double.tryParse(normalized);
+      }
       return null;
     }
 
     // 2. Tenta ler o dado (ex: 'fat_100g' ou 'fat_serving').
-    //    Se falhar (for nulo), tenta ler o dado sem sufixo (ex: 'fat'), como na Aveia.
+    //    Se falhar (for nulo ou vazio), tenta ler o dado sem sufixo (ex: 'fat'), como na Aveia.
     dynamic getValue(String key) {
-      // Prioriza a chave com sufixo (ex: 'fat_100g')
-      // Se não achar, tenta a chave "pura" (ex: 'fat')
-      return nutrimentsData[key + suffix] ?? nutrimentsData[key];
+      final suffixed = nutrimentsData[key + suffix];
+      if (suffixed != null && suffixed.toString().trim().isNotEmpty) {
+        return suffixed;
+      }
+      final plain = nutrimentsData[key];
+      if (plain != null && plain.toString().trim().isNotEmpty) {
+        return plain;
+      }
+      return null;
     }
 
     return Nutriments(
